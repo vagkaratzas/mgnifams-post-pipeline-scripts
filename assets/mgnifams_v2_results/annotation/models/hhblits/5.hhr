@@ -1,0 +1,110 @@
+Query         2644887350/182-293
+Match_columns 112
+No_of_seqs    25 out of 25
+Neff          4.87309
+Searched_HMMs 127
+Date          Tue Mar 31 19:08:14 2026
+Command       hhblits -z 0 -Z 1000 -p 80 -E 0.001 -hide_cons -hide_pred -cpu 4 -i 5.a3m -d pfamA_38.0/pfam -o 5.hhr 
+
+ No Hit                             Prob E-value P-value  Score    SS Cols Query HMM  Template HMM
+
+No 1
+>D3SRL6_NATMM/140-195
+Probab=92.62  E-value=0.0026  Score=35.93  Aligned_cols=26  Identities=15%  Similarity=0.209  Sum_probs=23.2  Template_Neff=5.800
+
+Q 2644887350/182    6 NQGLMRMSRDTGLKLVATNDIHYTYA   31 (112)
+                      |+.-.++|+++|+|.++..|.|....
+T D3SRL6_NATMM/1    4 NRRARRLADELELPPFTSSYAHLPSS   29 (56)
+Confidence            77888999999999999999997653
+
+
+No 2
+>A0A6J2MC45_9CHIR/119-173
+Probab=64.10  E-value=0.42  Score=26.66  Aligned_cols=38  Identities=18%  Similarity=0.337  Sum_probs=30.1  Template_Neff=3.000
+
+Q 2644887350/182   75 PYAPEAIENTHMIAERCNVEIEFGVTKLPKYEVPEGFD  112 (112)
+                      .+|-+|+.||.--.--++--++..-..||+..+|.|+.
+T A0A6J2MC45_9CH   17 SDIEDAMSSTLLQGGDLHSALDWLCLNLSDDSLPEGFS   54 (55)
+Confidence            45677999997555556667788899999999999974
+
+
+No 3
+>K9ULT5_CHAP6/47-258
+Probab=61.33  E-value=0.45  Score=31.85  Aligned_cols=21  Identities=14%  Similarity=0.287  Sum_probs=18.1  Template_Neff=6.400
+
+Q 2644887350/182    6 NQGLMRMSRDTGLKLVATNDI   26 (112)
+                      ..-|+++|++.++|+||+|=.
+T K9ULT5_CHAP6/4   85 YAPILEFAKANRLPVIALNTP  105 (212)
+Confidence            456899999999999999843
+
+
+No 4
+>A3DID9_ACET2/192-327
+Probab=59.07  E-value=0.51  Score=29.07  Aligned_cols=32  Identities=22%  Similarity=0.207  Sum_probs=24.0  Template_Neff=7.000
+
+Q 2644887350/182    6 NQGLMRMSRDTGLKLVATNDIHYTYAEDEKAH   37 (112)
+                      -+.+.+||+++|+|++.|-=..=.-++|-+++
+T A3DID9_ACET2/1   28 SEELLTLSRKCGIPVVTTLMGIGSVPYDYELN   59 (136)
+Confidence            35789999999999999876655555555543
+
+
+No 5
+>F8L6U3_SIMNZ/7-133
+Probab=55.26  E-value=0.67  Score=28.49  Aligned_cols=19  Identities=11%  Similarity=0.315  Sum_probs=16.9  Template_Neff=6.400
+
+Q 2644887350/182    7 QGLMRMSRDTGLKLVATND   25 (112)
+                      +.++++|+++|+||..|+-
+T F8L6U3_SIMNZ/7   96 KELKEICQKLKIPLLRSGE  114 (127)
+Confidence            5689999999999999875
+
+
+No 6
+>Q54LN0_DICDI/808-907
+Probab=42.10  E-value=1.6  Score=26.37  Aligned_cols=32  Identities=13%  Similarity=0.166  Sum_probs=23.9  Template_Neff=4.300
+
+Q 2644887350/182    8 GLMRMSRDTGLKLVATNDIHYTYAEDEKAHDILLCIQTGKKVADE   52 (112)
+                      .+++-|.+++||||+|.             =+.+|+-.|+.+.-.
+T Q54LN0_DICDI/8   59 LLQQVSTNLNIPILSIF-------------WVIQSILHQRKLPFD   90 (100)
+Confidence            46788999999999984             456777777755433
+
+
+No 7
+>E6SLI5_THEM7/186-435
+Probab=39.27  E-value=1.9  Score=29.95  Aligned_cols=20  Identities=15%  Similarity=0.394  Sum_probs=16.9  Template_Neff=4.000
+
+Q 2644887350/182    5 VNQGLMRMSRDTGLKLVATN   24 (112)
+                      +-+.|-.||+|+++||||-.
+T E6SLI5_THEM7/1  156 ISRSLKALARELKVPVLALS  175 (250)
+Confidence            45678889999999999965
+
+
+No 8
+>A0A1J5P128_MOOTH/9-123
+Probab=36.01  E-value=2.2  Score=25.61  Aligned_cols=36  Identities=11%  Similarity=0.071  Sum_probs=29.7  Template_Neff=6.000
+
+Q 2644887350/182    8 GLMRMSRDTGLKLVATNDIHYTYAEDEKAHDILLCI   43 (112)
+                      ..-++|+.++-+++.+..+||.+..-.++..+....
+T A0A1J5P128_MOO   68 AATTLAAACHVPVVVVAGIHLDGATPGELVQLQENA  103 (115)
+Confidence            445789999999999999999998877777766554
+
+
+No 9
+>A4J1D7_DESRM/320-400
+Probab=33.12  E-value=2.9  Score=24.44  Aligned_cols=23  Identities=13%  Similarity=0.507  Sum_probs=20.0  Template_Neff=3.400
+
+Q 2644887350/182    7 QGLMRMSRDTGLKLVATNDIHYT   29 (112)
+                      ..|+.||++-|+||....|.-|.
+T A4J1D7_DESRM/3   52 KHVLLLAKDRGVTVEEHPNLSYS   74 (81)
+Confidence            46889999999999999988774
+
+
+No 10
+>A6Q1G4_NITSB/490-729
+Probab=32.62  E-value=2.6  Score=27.85  Aligned_cols=20  Identities=10%  Similarity=0.110  Sum_probs=18.1  Template_Neff=6.900
+
+Q 2644887350/182    5 VNQGLMRMSRDTGLKLVATN   24 (112)
+                      +.+.++.+|+++|++|||++
+T A6Q1G4_NITSB/4  195 ILEGSYAVAEAFLKDVIALG  214 (240)
+Confidence            66789999999999999985
+
+

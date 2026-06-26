@@ -1,0 +1,169 @@
+Query         281747528/42-159
+Match_columns 118
+No_of_seqs    405 out of 406
+Neff          6.37239
+Searched_HMMs 356
+Date          Tue Mar 31 19:08:18 2026
+Command       hhblits -z 0 -Z 1000 -p 80 -E 0.001 -hide_cons -hide_pred -cpu 4 -i 8.a3m -d pfamA_38.0/pfam -o 8.hhr 
+
+ No Hit                             Prob E-value P-value  Score    SS Cols Query HMM  Template HMM
+  1 A0A2A2GTH1_9HELI/6-123         100.0 2.5E-41 3.8E-45  230.8   0.0  114    5-118     1-118 (118)
+  2 G0VQZ9_MEGEL/1-100              99.7 1.8E-22 2.9E-26  133.5   0.0   95    7-116     1-97  (100)
+  3 Q5LQV8_RUEPO/25-142             99.4 5.1E-18 8.6E-22  114.1   0.0   98    7-113     1-112 (118)
+  4 Q2TWE1_ASPOR/4-113              96.9 9.9E-07 1.5E-10   57.0   0.0   99    6-116     2-110 (110)
+  5 E8LKV3_SUCHY/8-96               95.9   4E-05 6.2E-09   47.3   0.0   86    7-110     1-89  (89)
+
+No 1
+>A0A2A2GTH1_9HELI/6-123
+Probab=100.00  E-value=2.5e-41  Score=230.80  Aligned_cols=114  Identities=40%  Similarity=0.660  Sum_probs=110.6  Template_Neff=3.600
+
+Q 281747528/42-1    5 QRKKIMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYETIMINCNPETVSTDFDTADKLYFEPVFWEHIYDIIQHEKPEG   84 (118)
+                      +.|||+|+|||+.||||++||||||++++++|++.||++++||+||+||+||++.+|++||+|+++|.|.+++++|+||+
+T A0A2A2GTH1_9HE    1 DIHTILLIGSGPIVIGQACEFDYSGTQAAKTLKKLGYRVVLINSNPATIMTDPNLADRTYIEPITEEVIANIIKQEKVDA   80 (118)
+Confidence            35899999999999999999999999999999999999999999999999999999999999999999999999999999
+
+
+Q 281747528/42-1   85 VIVQLGGQTALKLAEKLAKY----GIKILGTSFDALDL  118 (118)
+                      |++++|+|++.+++..|.++    |++++|++.++||+
+T A0A2A2GTH1_9HE   81 ILPTMGGQTALNVAMSMYEKGMLEGVKFLGANPSAIKK  118 (118)
+Confidence            99999999999999999999    59999999999984
+
+
+No 2
+>G0VQZ9_MEGEL/1-100
+Probab=99.71  E-value=1.8e-22  Score=133.47  Aligned_cols=95  Identities=17%  Similarity=0.125  Sum_probs=83.8  Template_Neff=4.600
+
+Q 281747528/42-1    7 KKIMVLGSGPNRIGQGIEFDYSCVHGVLAAKEC-GYETIMINC-NPETVSTDFDTADKLYFEPVFWEHIYDIIQHEKPEG   84 (118)
+                      .||||||||+|       ||    +++|+|+++ .++.++|.| |++| ..   .....++...+++.+.++++++++|+
+T G0VQZ9_MEGEL/1    1 MKVAVIGGGGR-------EH----TLAWKLAQSPSVDKLYAIPGSAAM-SE---VAQCVDIALSDLDAITDYAQKEGIDM   65 (100)
+Confidence            37999999999       99    999999998 788899999 9988 54   33356666777788999998889999
+
+
+Q 281747528/42-1   85 VIVQLGGQTALKLAEKLAKYGIKILGTSFDAL  116 (118)
+                      ++++|+.+|..+++|.|+++|+++|||++++-
+T G0VQZ9_MEGEL/1   66 LVVGPEVPLTEGLADLAQSKGLAVFGPNKAAA   97 (100)
+Confidence            99999999999999999888999999998763
+
+
+No 3
+>Q5LQV8_RUEPO/25-142
+Probab=99.43  E-value=5.1e-18  Score=114.12  Aligned_cols=98  Identities=17%  Similarity=0.175  Sum_probs=85.0  Template_Neff=6.600
+
+Q 281747528/42-1    7 KKIMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYETIMINCNP--ETVSTDF-----D----TADKLYF---EPVFWEH   72 (118)
+                      |+|+|||+|++       ++++|++++++|+++||++++|||+.  +++.+.+     .    ..|.+.+   ++..++.
+T Q5LQV8_RUEPO/2    1 KTIAMVGASAD-------KTKFSYGVLRQLSEIGYDILPVNPNPNVSEIRGLKVYHSLEEIDQPVDMVDVFRPKEELYGF   73 (118)
+Confidence            57999999999       99999999999999999999999985  7777752     2    4565555   6667888
+
+
+Q 281747528/42-1   73 IYDIIQHEKPEGVIVQLGGQTALKLAEKLAKYGIKILGTSF  113 (118)
+                      ++++++. ++..+|+|+|.. ++++++.++++|++++|+.-
+T Q5LQV8_RUEPO/2   74 AEKAIAI-GAKVLWGQIGVY-DDKAAALAEDAGLKVVMNRC  112 (118)
+Confidence            9998666 999999999988 99999999999999998764
+
+
+No 4
+>Q2TWE1_ASPOR/4-113
+Probab=96.91  E-value=9.9e-07  Score=56.95  Aligned_cols=99  Identities=11%  Similarity=0.207  Sum_probs=69.9  Template_Neff=3.900
+
+Q 281747528/42-1    6 RKKIMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYETIMINCNPETVSTDFDTADK-LYF-------EPVFWEHIYDII   77 (118)
+                      .+||||-=-|-.           +.++.++.++.|++.+.|......-+..-..+|. +.+       +.++.+.+.+++
+T Q2TWE1_ASPOR/4    2 LKKVLIANRGEI-----------AIRIIRACCDYDIKSVAVYSDLDVDSPFVRLADEAYGLKGFQTVDTYLNIDKLIAVA   70 (110)
+Confidence            356777655544           4488999998899998887754321111123332 222       334456788888
+
+
+Q 281747528/42-1   78 QHEKPEGVIVQLG--GQTALKLAEKLAKYGIKILGTSFDAL  116 (118)
+                      ++.++|+||.+.|  +. +.++++.+.++|+..+||++++|
+T Q2TWE1_ASPOR/4   71 KRSGADAIHPGYGFLSE-RAEFAQAVLDAGLTWIGPDPSVI  110 (110)
+Confidence            8889999999998  55 67889999999999999999875
+
+
+No 5
+>E8LKV3_SUCHY/8-96
+Probab=95.87  E-value=4e-05  Score=47.31  Aligned_cols=86  Identities=23%  Similarity=0.252  Sum_probs=54.5  Template_Neff=4.000
+
+Q 281747528/42-1    7 KKIMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYET-IMINC--NPETVSTDFDTADKLYFEPVFWEHIYDIIQHEKPE   83 (118)
+                      |+++|||-|-.       -    -.++++|.++|+.. ..+..  ||.-+..-+...+ +++-+.+.    +++.  .+|
+T E8LKV3_SUCHY/8    1 KKIAVLGLGIS-------N----VAVISYLLKHDLKALGVYDTRANPPYVDDLPSGID-LRLGPLNI----EELK--TYD   62 (89)
+Confidence            57899998865       3    37888888889877 44433  3321111011111 12222221    2222  589
+
+
+Q 281747528/42-1   84 GVIVQLGGQTALKLAEKLAKYGIKILG  110 (118)
+                      .+++.||..++.-....+.++|++++|
+T E8LKV3_SUCHY/8   63 MLVVSPGLSISLPEIAAAGNAGVEIVG   89 (89)
+Confidence            999999999999999999999999987
+
+
+No 6
+>SUCD2_ARCFU/6-99
+Probab=89.91  E-value=0.01  Score=35.65  Aligned_cols=83  Identities=17%  Similarity=0.183  Sum_probs=42.5  Template_Neff=5.700
+
+Q 281747528/42-1    5 QRKKIMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGY-ETIMINCN--PETVSTDFDTADKLYFEPVFWEHIYDIIQHEK   81 (118)
+                      ...+|+|+|.|+.   |.. ++      .+.+.+.|. .+.-+||+  ..++.+       +.+-.    .+.++.++.+
+T SUCD2_ARCFU/6-    2 ERTKVVVQGITGY---QGK-FH------TERMLNYGTKIVAGVTPGKGGTEVLG-------VPVYD----SVKEAVREAD   60 (94)
+Confidence            3468999999998   333 33      111121222 24445664  222222       11111    2333333323
+
+
+Q 281747528/42-1   82 PEGVIVQLGGQTALKLAEKLAKYGIKI  108 (118)
+                      +|..++.-..+-+...+++|-++|++.
+T SUCD2_ARCFU/6-   61 ANASVIFVPAPFAADAVMEAADAGIKV   87 (94)
+Confidence            666555555555788888887777764
+
+
+No 7
+>NORW_ECOLI/143-223
+Probab=87.05  E-value=0.024  Score=32.67  Aligned_cols=34  Identities=15%  Similarity=0.322  Sum_probs=24.9  Template_Neff=6.500
+
+Q 281747528/42-1    8 KIMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYETIMINCNPET   52 (118)
+                      +++|||+|..    +       ..++..|++.|.++.+|...+..
+T NORW_ECOLI/143    1 RVLIVGGGLI----G-------SELAMDFCRAGKAVTLIDNAASI   34 (81)
+Confidence            5899999977    2       25567778778888888776443
+
+
+No 8
+>R4KJ16_9FIRM/3-91
+Probab=85.35  E-value=0.038  Score=32.99  Aligned_cols=84  Identities=24%  Similarity=0.305  Sum_probs=48.6  Template_Neff=3.600
+
+Q 281747528/42-1    9 IMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYETIMINCNPETVSTDFDTADKL---YFEPVFWEHIYDIIQHEKPEGV   85 (118)
+                      ||++++|-|       -.    .++++++++|-+++....+|-.  -.-..+|.-   .+.. -.+.+.++++  ++++|
+T R4KJ16_9FIRM/3    1 IAVVGGKLQ-------GI----EATYLAHKAGWEVIVLDKNRNS--PASELCDQFLSVDILH-NSDVLSDICQ--KVDLV   64 (89)
+Confidence            467777766       44    7888888887788888776421  111133422   2222 4566778777  68998
+
+
+Q 281747528/42-1   86 IVQLGGQTALKLAEKLA-KYGIKI  108 (118)
+                      +.--..+....+....+ +.|+++
+T R4KJ16_9FIRM/3   65 IPAIEDQTVLSLLNQITLRTGCPV   88 (89)
+Confidence            87666543333333332 225543
+
+
+No 9
+>Q74GI5_GEOSL/425-540
+Probab=84.23  E-value=0.042  Score=33.08  Aligned_cols=72  Identities=22%  Similarity=0.221  Sum_probs=45.3  Template_Neff=7.500
+
+Q 281747528/42-1    9 IMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYETIMINCNPETVSTDF-DTADKLYFEPVFWEHIYDIIQHEKPEGVIV   87 (118)
+                      |+|+|.|..           |..+++.|.+.+..++.|..|++.+.... .....++-+..+.+.+.++ .-+++|++++
+T Q74GI5_GEOSL/4    1 AIVVGYGPT-----------GRTLARLLSENGIDPVIIEMNLHTVRQLNADGTLAIYGDATREETLKGA-GVESAVAFIL   68 (116)
+Confidence            567885544           45899999985435888888887655421 1111222266666777775 3336888888
+
+
+Q 281747528/42-1   88 QLGGQ   92 (118)
+                      ..+..
+T Q74GI5_GEOSL/4   69 TSAGM   73 (116)
+Confidence            87643
+
+
+No 10
+>A0A0P9C7A0_9GAMM/1-94
+Probab=81.35  E-value=0.074  Score=31.85  Aligned_cols=89  Identities=20%  Similarity=0.204  Sum_probs=52.9  Template_Neff=4.200
+
+Q 281747528/42-1    8 KIMVLGSGPNRIGQGIEFDYSCVHGVLAAKECGYETIMINCNPETVSTDFDTADKLYFEPVFWEHIYDIIQHEKPEGVIV   87 (118)
+                      ||+|+...+.        -|+..++..+.++.|+++-+++|..=.+.-+....+ ++...         -...+.|+||+
+T A0A0P9C7A0_9GA    2 KLAVLSRNRR--------LYSTRRLAEAAVQRGHEVHIIDPLRCTIDIASQRPS-IQFKK---------QSLTGFDAVVP   63 (94)
+Confidence            5777776665        478888999999889999999995322111111111 22211         11225677776
+
+
+Q 281747528/42-1   88 QLGGQ---TALKLAEKLAKYGIKILGTSFDA  115 (118)
+                      --|+.   -...++..|+..|+.++ ++..+
+T A0A0P9C7A0_9GA   64 RIGASITFYGLAVVRQFEMMGVYSL-NESVA   93 (94)
+Confidence            65532   23466777777788777 44443
+
+

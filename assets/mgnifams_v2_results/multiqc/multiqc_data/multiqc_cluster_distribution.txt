@@ -1,0 +1,10 @@
+Sample	Cluster Size	Number of Clusters
+1	1	26584
+10	10	1
+12	12	1
+2	2	109
+3	3	21
+4	4	5
+5	5	4
+6	6	1
+8	8	2

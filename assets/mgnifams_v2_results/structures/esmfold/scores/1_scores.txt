@@ -1,0 +1,9 @@
+26/03/31 19:10:03 | INFO | root | Reading sequences from family_ids.1_trimmed.fasta
+26/03/31 19:10:03 | INFO | root | Loaded 5 sequences from family_ids.1_trimmed.fasta
+26/03/31 19:10:03 | INFO | root | Loading model
+26/03/31 19:10:44 | INFO | root | Starting Predictions
+26/03/31 19:10:55 | INFO | root | Predicted structure for 1 with length 20, pLDDT 54.7, pTM 0.029 in 2.3s (amortized, batch size 5). 1 / 5 completed.
+26/03/31 19:10:55 | INFO | root | Predicted structure for 2 with length 20, pLDDT 78.0, pTM 0.092 in 2.3s (amortized, batch size 5). 2 / 5 completed.
+26/03/31 19:10:55 | INFO | root | Predicted structure for 3 with length 20, pLDDT 74.2, pTM 0.059 in 2.3s (amortized, batch size 5). 3 / 5 completed.
+26/03/31 19:10:55 | INFO | root | Predicted structure for 4 with length 20, pLDDT 52.2, pTM 0.027 in 2.3s (amortized, batch size 5). 4 / 5 completed.
+26/03/31 19:10:55 | INFO | root | Predicted structure for 5 with length 20, pLDDT 71.9, pTM 0.080 in 2.3s (amortized, batch size 5). 5 / 5 completed.

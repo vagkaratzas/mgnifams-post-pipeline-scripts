@@ -1,0 +1,2 @@
+Sample	Family Id 1	Family Id 2	Jaccard Score
+1	4	3	0.5675675675675675

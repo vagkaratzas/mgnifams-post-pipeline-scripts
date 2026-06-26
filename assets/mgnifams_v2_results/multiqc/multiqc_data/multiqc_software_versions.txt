@@ -1,0 +1,39 @@
+Sample	sed	python	pandas	find	pigz	coreutils	foldseek	pyfamsa	pyhmmer	pytrimal	numpy	biopython	hh-suite	hhsuite	hmmer	mmseqs	esm-fold	s4pred	seqkit	ebi-metagenomics/mgnifams	Nextflow
+CALCULATE_CLUSTER_DISTRIBUTION	4.7																				
+CHUNK_CLUSTERS	4.7																				
+EXPORT_FOLDS	4.7																				
+EXPORT_MGNIFAMS		3.10.6	1.4.3																		
+EXPORT_MODEL_PFAMS		3.13.0																			
+EXTRACT_CUDA_FAILED		3.13.0																			
+EXTRACT_ESMFOLD_SCORES	4.7																				
+EXTRACT_UNANNOTATED_SLICES		3.13.0																			
+EXTRACT_UNIQUE_CLUSTER_REPS	4.7																				
+FILTER_EXPORT_FUNFAMS	4.7																				
+FILTER_EXPORT_PFAMS	4.7																				
+FIND_CONCATENATE				4.6.0	2.8	9.4															
+FOLDSEEK_EASYSEARCH_PDB							9.427df8a														
+GENERATE_FAMILIES		3.13.5	2.3.2					0.6.0	0.11.1	0.8.2	2.3.2	1.85									
+HHSUITE_HHBLITS													3.3.0								
+HHSUITE_REFORMAT														3.3.0							
+HMMER_HMMSEARCH															3.4						
+HMMER_HMMSEARCH_FUNFAMS															3.4						
+HMMER_HMMSEARCH_PFAM															3.4						
+IDENTIFY_REDUNDANT_FAMS		3.10.6	1.4.3																		
+MMSEQS_CREATEDB																17.b804f					
+MMSEQS_CREATETSV																17.b804f					
+MMSEQS_LINCLUST																17.b804f					
+PARSE_CIF		3.13.1									2.3.1	1.85									
+PARSE_S4PRED_TO_FEATURE_VIEWER		3.13.0																			
+PIGZ_UNCOMPRESS					2.8																
+POOL_NONREDUNDANT_FAMILIES		3.13.0																			
+POOL_PREREDUNDANT_FAMILIES_TSV		3.13.0																			
+PRESENT_DISCARDED_FAMILIES	4.7																				
+PRESENT_FAMILY_METADATA	4.7																				
+REFORMAT_FULL_MSA														3.3.0							
+REFORMAT_SEED_MSA														3.3.0							
+RUN_ESMFOLD																	1.0.3				
+S4PRED_RUNMODEL																		1.2.1			
+SEQKIT_STATS																			2.9.0		
+SEQKIT_STATS_TO_MQC	4.7																				
+TRIM_REPS	4.7																				
+Workflow																				v2.0.0dev	25.10.4

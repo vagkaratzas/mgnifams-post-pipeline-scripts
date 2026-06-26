@@ -1,0 +1,15 @@
+# id: "cluster_distribution"
+# section_name: "Initial Clustering Sizes Distribution"
+# description: "A total of <b> 26949 </b> input sequences were processed, with seed clusters identified using the MMseqs suite. The table below provides a breakdown of cluster sizes, showing the number of times each unique cluster size was observed."
+# format: "csv"
+# plot_type: "table"
+Id,Cluster Size,Number of Clusters
+1,1,26584
+2,2,109
+3,3,21
+4,4,5
+5,5,4
+6,6,1
+8,8,2
+10,10,1
+12,12,1

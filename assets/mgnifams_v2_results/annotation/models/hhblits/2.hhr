@@ -1,0 +1,110 @@
+Query         6319894033/167-269
+Match_columns 103
+No_of_seqs    85 out of 85
+Neff          7.23553
+Searched_HMMs 100
+Date          Tue Mar 31 19:08:08 2026
+Command       hhblits -z 0 -Z 1000 -p 80 -E 0.001 -hide_cons -hide_pred -cpu 4 -i 2.a3m -d pfamA_38.0/pfam -o 2.hhr 
+
+ No Hit                             Prob E-value P-value  Score    SS Cols Query HMM  Template HMM
+
+No 1
+>A0A0A2I1L5_9BACT/28-52
+Probab=90.45  E-value=0.0088  Score=26.05  Aligned_cols=20  Identities=15%  Similarity=0.331  Sum_probs=17.3  Template_Neff=4.800
+
+Q 6319894033/167   43 VVMKDGYIQQIGTPEDIYNE   62 (103)
+                      +++++|+|+++|+.+++...
+T A0A0A2I1L5_9BA    2 IAVAGDTIIALGPTADLEKA   21 (25)
+Confidence            56889999999999998764
+
+
+No 2
+>Q6N4P3_RHOPA/230-256
+Probab=87.79  E-value=0.021  Score=25.19  Aligned_cols=16  Identities=25%  Similarity=0.542  Sum_probs=13.8  Template_Neff=4.500
+
+Q 6319894033/167   49 YIQQIGTPEDIYNEPV   64 (103)
+                      ++++.|+|++|.++|.
+T Q6N4P3_RHOPA/2    1 RVIAQGVPDEIKGNPK   16 (27)
+Confidence            4688999999999974
+
+
+No 3
+>Q8CUM3_OCEIH/164-446
+Probab=85.29  E-value=0.039  Score=36.97  Aligned_cols=42  Identities=19%  Similarity=0.436  Sum_probs=35.6  Template_Neff=3.300
+
+Q 6319894033/167   11 QYELKTMQQELGITFIYVTHDQEEALTMSDRIVVMKDGYIQQ   52 (103)
+                      ...++++.+++|.+.|+|.--....+..||+|+.|++=+...
+T Q8CUM3_OCEIH/1  212 IHRIRQLVDDLGVSVILVTGGSGDYFSVADNVILMEEYIPRQ  253 (283)
+Confidence            445677878999999999999999999999999999765544
+
+
+No 4
+>B8FDC8_DESAL/25-296
+Probab=80.75  E-value=0.072  Score=33.36  Aligned_cols=34  Identities=12%  Similarity=0.124  Sum_probs=26.9  Template_Neff=9.900
+
+Q 6319894033/167    1 ALDLKLRKDMQYELKTMQQELGITFIYVTHDQEE   34 (103)
+                      +|+|.....+.+.|+...+..+.-+|+.||+...
+T B8FDC8_DESAL/2  237 GIHPAIMPSILGWMLNAARTANVQIIATTHSLEA  270 (272)
+Confidence            5888888888888877644468899999999653
+
+
+No 5
+>Q9HIL4_THEAC/205-269
+Probab=71.62  E-value=0.22  Score=25.75  Aligned_cols=31  Identities=10%  Similarity=0.274  Sum_probs=25.8  Template_Neff=5.600
+
+Q 6319894033/167   51 QQIGTPEDIYNEPVNKFVADFIGESNILDGI   81 (103)
+                      |+.|+.++|+++|..+|++.++..-......
+T Q9HIL4_THEAC/2    1 VEFGPRDEMLNDPQHPYNFLLLRSMPRIGAK   31 (65)
+Confidence            5789999999999999999999877655444
+
+
+No 6
+>W5LZZ4_LEPOC/98-239
+Probab=70.96  E-value=0.24  Score=29.71  Aligned_cols=59  Identities=29%  Similarity=0.467  Sum_probs=46.6  Template_Neff=4.100
+
+Q 6319894033/167    5 KLRKDMQYELKTMQQELGITFIYVTHDQEEALTMSDRIVVMKDGYIQQIGTPEDIYNEPVNKFV   68 (103)
+                      ..+...+.+|++-+...|+++-+     +.=..+=||-+++++|-++-.|--=++|..|.+.|.
+T W5LZZ4_LEPOC/9   64 STQVNALAEIKQSLQNHGVTLTI-----EYSTTIHDREIRFNNGWIIKIGRGLDYFKKPQGKFS  122 (142)
+Confidence            45566677777777778877654     334567799999999999999999999999888775
+
+
+No 7
+>H1Y3R4_9SPHI/30-152
+Probab=44.71  E-value=1.4  Score=24.63  Aligned_cols=30  Identities=20%  Similarity=0.320  Sum_probs=26.1  Template_Neff=7.200
+
+Q 6319894033/167    2 LDLKLRKDMQYELKTMQQELGITFIYVTHD   31 (103)
+                      |.+..+.+|...|+++.++.|.-+.+||-+
+T H1Y3R4_9SPHI/3    8 LSKADVDDLNDKIAEMDKALGVQMAIVLVE   37 (123)
+Confidence            566788899999999999999999999976
+
+
+No 8
+>A0A8J7U8V6_9BACT/321-384
+Probab=42.91  E-value=1.5  Score=21.55  Aligned_cols=29  Identities=17%  Similarity=0.125  Sum_probs=23.2  Template_Neff=7.000
+
+Q 6319894033/167    2 LDLKLRKDMQYELKTMQQELGITFIYVTH   30 (103)
+                      ||+.....+...++.+.+++|.+..++.|
+T A0A8J7U8V6_9BA   34 LSEHEMNHWQQVRTAFQERYGTPLPIVEK   62 (64)
+Confidence            67777788888888888888888877765
+
+
+No 9
+>A0A411CWC1_9CAUD/1-50
+Probab=34.84  E-value=2.8  Score=19.74  Aligned_cols=29  Identities=24%  Similarity=0.383  Sum_probs=20.9  Template_Neff=1.100
+
+Q 6319894033/167   22 GITFIYVTHDQEEALTMSDRIVVMKDGYIQQ   52 (103)
+                      |..+|=|  ....+.++||||.-+++-+|.+
+T A0A411CWC1_9CA   18 GSPVIPV--RPSDIAAMADRIMKIDQERVTA   46 (50)
+Confidence            4444443  4566888999999999888754
+
+
+No 10
+>B8E276_DICTD/77-146
+Probab=30.98  E-value=3.3  Score=21.04  Aligned_cols=21  Identities=10%  Similarity=0.237  Sum_probs=17.8  Template_Neff=5.400
+
+Q 6319894033/167   22 GITFIYVTHDQEEALTMSDRI   42 (103)
+                      .-|+++|..+.+.+..+.+++
+T B8E276_DICTD/7   48 DDTILIVLRSKDKTQEALEKL   68 (70)
+Confidence            459999999999999888775
+
+

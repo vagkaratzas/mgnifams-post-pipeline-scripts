@@ -1,0 +1,6 @@
+# id: "discarded_clusters"
+# section_name: "Discarded clusters"
+# description: "Some of the initial clusters above minimum thresholds might not have created a family. If so, they are presented in a table below."
+# format: "csv"
+# plot_type: "table"
+Cluster Representative,Discard Reason,Value

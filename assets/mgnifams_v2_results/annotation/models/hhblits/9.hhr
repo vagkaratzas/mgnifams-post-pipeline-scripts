@@ -1,0 +1,110 @@
+Query         291382574/70-230
+Match_columns 161
+No_of_seqs    20 out of 20
+Neff          3.9212
+Searched_HMMs 161
+Date          Tue Mar 31 19:08:19 2026
+Command       hhblits -z 0 -Z 1000 -p 80 -E 0.001 -hide_cons -hide_pred -cpu 4 -i 9.a3m -d pfamA_38.0/pfam -o 9.hhr 
+
+ No Hit                             Prob E-value P-value  Score    SS Cols Query HMM  Template HMM
+
+No 1
+>D9RZD3_THEOJ/5-280
+Probab=29.35  E-value=3.6  Score=31.10  Aligned_cols=31  Identities=32%  Similarity=0.522  Sum_probs=27.6  Template_Neff=3.500
+
+Q 291382574/70-2   70 VINQKFFISGFKSLWHRAPNMDTLVALGSTA  100 (161)
+                      +-+-++|+.+.+..|+-.||+|.||-.|-++
+T D9RZD3_THEOJ/5  172 YRNSKFFIEAVKEARKYEPSLDDLVIFAGAC  202 (276)
+Confidence            5677999999999999999999999877665
+
+
+No 2
+>A0A015JNE9_RHIIW/7-77
+Probab=27.57  E-value=3.7  Score=24.50  Aligned_cols=21  Identities=14%  Similarity=0.148  Sum_probs=17.1  Template_Neff=5.200
+
+Q 291382574/70-2   58 GLTQLLLTVIIMVINQKFFIS   78 (161)
+                      .+...++|.++.+|.||||++
+T A0A015JNE9_RHI   41 FGGGIFLTSLFVLPPWSFYNQ   61 (71)
+Confidence            445678888999999999975
+
+
+No 3
+>A0A0H4MKE4_9REOV/18-193
+Probab=20.87  E-value=6.4  Score=27.59  Aligned_cols=30  Identities=17%  Similarity=0.193  Sum_probs=17.7  Template_Neff=4.200
+
+Q 291382574/70-2   45 PLPSFYNSNHVAMGLTQLLLTVIIMVINQK   74 (161)
+                      ..|+|+.+=.......-+++|.+.+++++.
+T A0A0H4MKE4_9RE  104 QLNEWLKMANATSQGIVGVITVAILYIGKQ  133 (176)
+Confidence            455564422222335677888888887763
+
+
+No 4
+>Q818Z1_BACCR/1-37
+Probab=20.28  E-value=7.3  Score=21.21  Aligned_cols=15  Identities=33%  Similarity=0.379  Sum_probs=12.4  Template_Neff=2.200
+
+Q 291382574/70-2  141 TLITVGKTLEARSKG  155 (161)
+                      .+|++||..|-|.|=
+T Q818Z1_BACCR/1    9 RVTLVGKAWQIRHKL   23 (37)
+Confidence            368999999999874
+
+
+No 5
+>K0A7P3_EPIML/1-42
+Probab=20.28  E-value=7.5  Score=21.64  Aligned_cols=18  Identities=22%  Similarity=0.375  Sum_probs=15.8  Template_Neff=1.600
+
+Q 291382574/70-2   71 INQKFFISGFKSLWHRAP   88 (161)
+                      ||..|+-.-+++++|+-.
+T K0A7P3_EPIML/1   19 PGEGFIFHIIKGLFHAGK   36 (42)
+Confidence            999999999999998754
+
+
+No 6
+>H0WKE7_OTOGA/19-188
+Probab=19.48  E-value=7.2  Score=27.21  Aligned_cols=14  Identities=29%  Similarity=0.276  Sum_probs=11.7  Template_Neff=4.000
+
+Q 291382574/70-2  142 LITVGKTLEARSKG  155 (161)
+                      =||+|.|.|+|.|=
+T H0WKE7_OTOGA/1    7 KVLTGNWVEERRKF   20 (170)
+Confidence            37899999999764
+
+
+No 7
+>A0A4P8YNQ4_9ENTR/1-53
+Probab=18.10  E-value=8.6  Score=22.32  Aligned_cols=19  Identities=21%  Similarity=0.494  Sum_probs=15.3  Template_Neff=2.800
+
+Q 291382574/70-2   16 PKLKKRLFWSVGFLIILMY   34 (161)
+                      +.+||+.|.++.++..+|-
+T A0A4P8YNQ4_9EN   23 PELKRKAWVAAFLVSALFW   41 (53)
+Confidence            6699999999888777654
+
+
+No 8
+>Q6N5P1_RHOPA/5-86
+Probab=17.69  E-value=8.4  Score=23.82  Aligned_cols=32  Identities=13%  Similarity=0.387  Sum_probs=23.0  Template_Neff=4.100
+
+Q 291382574/70-2   13 TETPKLKKRLFWSVGFLIILMYFSMGHMMWGW   44 (161)
+                      .+.++++|+++++-+++.+++..-......||
+T Q6N5P1_RHOPA/5   44 PVATLLARKALWTTLISAVIFAIALYAYRSGW   75 (82)
+Confidence            45567999999988888888766655444444
+
+
+No 9
+>E1QV93_VULDI/60-190
+Probab=11.67  E-value=15  Score=24.03  Aligned_cols=72  Identities=11%  Similarity=0.116  Sum_probs=39.2  Template_Neff=4.800
+
+Q 291382574/70-2   17 KLKKRLFWSVGFLIILMYFSM----GHMMWGWPLPSFYNSNHVAMGLTQLLLTVIIMVINQKFFISGFKSLWHRAP   88 (161)
+                      +.+|+...+.+++++-+++..    +.-+......++.+.+.....+..+..+-+++...-.|++++++.+-+++.
+T E1QV93_VULDI/6   24 AIWSNALYALVTAIVSGIILAFVLAGTAYLSLIYMGPGALSRLGMAIAFFVAFYIIILISGFFLRNAYNELGRSSG   99 (131)
+Confidence            355666666666655544432    111111122222222223344455566777777888899999888776653
+
+
+No 10
+>A0A1D8S487_9EURY/24-84
+Probab=10.54  E-value=18  Score=20.80  Aligned_cols=30  Identities=17%  Similarity=0.402  Sum_probs=20.6  Template_Neff=4.500
+
+Q 291382574/70-2   17 KLKKRLFWSVGFL-IILMYFSMGHMMWGWPL   46 (161)
+                      +.+|.+|.++++. +.++.+|.|.|+.++.-
+T A0A1D8S487_9EU    6 RLRREFLLQAGLLNVGVLAASGGAITLAFTA   36 (61)
+Confidence            4666677665543 66778888999976643
+
+

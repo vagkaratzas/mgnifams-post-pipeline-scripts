@@ -1,0 +1,2 @@
+Sample	File Format	Sequence Type	Number of Sequences	Total Length (aa)	Minimum Length	Average Length	Maximum Length	Length Q1 (25th percentile)	Length Q2 (Median)	Length Q3 (75th percentile)	Total Gaps	N50 Length	N50 Sequence Count
+mgnifams_v2.fa	FASTA	Protein	26949	5317462	100	197.3	5298	122.0	160.0	212.0	0	198	753
