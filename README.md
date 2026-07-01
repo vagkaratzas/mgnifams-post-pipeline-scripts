@@ -1,6 +1,31 @@
 # mgnifams-post-pipeline-scripts
 Contains post-processing scripts for various stats, after the main MGnifams pipeline finishes execution
 
+## bin/biome_analysis.py
+Streams MGnifam biome blobs from the `mgnifam` SQLite table, counts leaf-level
+biome paths per family, writes a text report, and optionally renders a PNG bar
+plot. Leaf biomes are keyed by their full `root:...` path, so duplicate terminal
+labels such as `Sediment` or `Fecal` remain separate when they come from
+different branches. The report also lists duplicate terminal leaf labels to show
+where last-label-only grouping would collapse distinct paths.
+
+Default outputs are written under `output/`:
+- `mgnifams_biome_distribution.txt`
+- `mgnifams_biome_distribution.png`
+
+```
+python bin/biome_analysis.py <path/to/mgnifams.sqlite3>
+```
+
+Useful options:
+
+```
+python bin/biome_analysis.py <path/to/mgnifams.sqlite3> \
+  --output-dir <path/to/output> \
+  --no-plot \
+  --log-every 1000
+```
+
 ## bin/extract_true_novel_superfamilies.py
 Writes a TXT list of true-novel superfamily ids. A superfamily is included only
 when every member family listed in the `Family Ids` column of
