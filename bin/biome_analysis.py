@@ -273,13 +273,15 @@ def write_leaf_distribution_plot(leaf_df, output_figure):
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(12, max(8, len(leaf_df) * 0.28)))
-    ax.barh(
+    bars = ax.barh(
         leaf_df["label"],
         leaf_df["count"],
         color=leaf_df["colour"],
         edgecolor="white",
         linewidth=0.4,
     )
+    label_bar_values(ax, bars)
+    ax.set_xlim(right=max(leaf_df["count"]) * 1.12)
     ax.set_xlabel("Number of families", fontsize=11)
     ax.set_title(
         "MGnifams leaf-level biome distribution", fontsize=13, fontweight="bold"
@@ -300,10 +302,26 @@ def write_leaf_distribution_plot(leaf_df, output_figure):
     return True
 
 
+def label_bar_values(ax, bars):
+    """Draw the family count just beyond each horizontal bar."""
+    for bar in bars:
+        width = bar.get_width()
+        ax.text(
+            width + 0.2,
+            bar.get_y() + bar.get_height() / 2,
+            f"{int(width)}",
+            va="center",
+            ha="left",
+            fontsize=8,
+            color="#333333",
+        )
+
+
 def format_report(result, output_figure, figure_written):
     family_data = result["family_data"]
     total_families = result["total_families"]
     leaf_df = result["leaf_df"]
+    total_leaf_paths = len(leaf_df)
     exclusive = result["exclusive"]
     exclusive_leaf_biomes = result["exclusive_leaf_biomes"]
     duplicate_leaf_labels = result["duplicate_leaf_labels"]
@@ -369,32 +387,50 @@ def format_report(result, output_figure, figure_written):
 
     breadth = sorted(family_data.items(), key=lambda item: -item[1]["n_leaves"])
     lines.append("")
-    lines.append("=== Broadest families (most leaf biomes) ===")
-    lines.append(f"  {'Family ID':<20} {'# leaf biomes':>15}  Top-level categories")
-    lines.append(f"  {'-' * 20} {'-' * 15}  {'-' * 30}")
+    lines.append("=== Broadest families (most leaf paths) ===")
+    lines.append(
+        f"  {'Family ID':<20} {'# leaf paths':>15} "
+        f"{'Available leaf paths':>20} {'% available':>12}  Top-level categories"
+    )
+    lines.append(
+        f"  {'-' * 20} {'-' * 15} {'-' * 20} {'-' * 12}  {'-' * 30}"
+    )
     for fam_id, data in breadth[:25]:
         tops = ", ".join(sorted(data["top_levels"]))
-        lines.append(f"  {fam_id:<20} {data['n_leaves']:>15}  {tops}")
+        percent_available = 100 * data["n_leaves"] / total_leaf_paths
+        lines.append(
+            f"  {fam_id:<20} {data['n_leaves']:>15} "
+            f"{total_leaf_paths:>20} {percent_available:>11.1f}%  {tops}"
+        )
 
     narrowest = sorted(
         family_data.items(), key=lambda item: (item[1]["n_leaves"], str(item[0]))
     )
     lines.append("")
-    lines.append("=== Narrowest families (least leaf biomes) ===")
-    lines.append(f"  {'Family ID':<20} {'# leaf biomes':>15}  Top-level categories")
-    lines.append(f"  {'-' * 20} {'-' * 15}  {'-' * 30}")
+    lines.append("=== Narrowest families (least leaf paths) ===")
+    lines.append(
+        f"  {'Family ID':<20} {'# leaf paths':>15} "
+        f"{'Available leaf paths':>20} {'% available':>12}  Top-level categories"
+    )
+    lines.append(
+        f"  {'-' * 20} {'-' * 15} {'-' * 20} {'-' * 12}  {'-' * 30}"
+    )
     for fam_id, data in narrowest[:25]:
         tops = ", ".join(sorted(data["top_levels"]))
-        lines.append(f"  {fam_id:<20} {data['n_leaves']:>15}  {tops}")
+        percent_available = 100 * data["n_leaves"] / total_leaf_paths
+        lines.append(
+            f"  {fam_id:<20} {data['n_leaves']:>15} "
+            f"{total_leaf_paths:>20} {percent_available:>11.1f}%  {tops}"
+        )
 
     n_leaves_dist = [data["n_leaves"] for data in family_data.values()]
     lines.append("")
-    lines.append("  Leaf biome count distribution:")
+    lines.append("  Leaf path count distribution:")
     lines.append(f"    Median : {np.median(n_leaves_dist):.0f}")
     lines.append(f"    Mean   : {np.mean(n_leaves_dist):.1f}")
     lines.append(f"    Max    : {np.max(n_leaves_dist)}")
-    lines.append(f"    > 5 biomes : {sum(1 for n in n_leaves_dist if n > 5)} families")
-    lines.append(f"    > 10 biomes: {sum(1 for n in n_leaves_dist if n > 10)} families")
+    lines.append(f"    > 5 paths : {sum(1 for n in n_leaves_dist if n > 5)} families")
+    lines.append(f"    > 10 paths: {sum(1 for n in n_leaves_dist if n > 10)} families")
     return "\n".join(lines) + "\n"
 
 

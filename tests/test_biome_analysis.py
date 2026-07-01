@@ -147,6 +147,131 @@ def test_leaf_distribution_keeps_duplicate_terminal_labels_as_separate_paths():
     ]
 
 
+def test_family_breadth_counts_duplicate_terminal_labels_as_separate_paths():
+    module = load_module()
+    rows = [
+        (
+            "MGF0001",
+            (
+                "ids,labels,parents,counts\n"
+                "root,root,,2\n"
+                "root:Environmental,Environmental,root,1\n"
+                "root:Environmental:Soil,Soil,root:Environmental,1\n"
+                "root:Host-associated,Host-associated,root,1\n"
+                "root:Host-associated:Plants,Plants,root:Host-associated,1\n"
+                "root:Host-associated:Plants:Soil,Soil,root:Host-associated:Plants,1\n"
+            ),
+        )
+    ]
+
+    result = module.analyse_biomes(rows)
+
+    assert result["family_data"]["MGF0001"]["n_leaves"] == 2
+
+
+def test_format_report_labels_family_breadth_as_leaf_paths():
+    module = load_module()
+    result = module.analyse_biomes(
+        [
+            (
+                "MGF0001",
+                (
+                    "ids,labels,parents,counts\n"
+                    "root,root,,1\n"
+                    "root:Environmental,Environmental,root,1\n"
+                    "root:Environmental:Soil,Soil,root:Environmental,1\n"
+                ),
+            )
+        ]
+    )
+
+    text = module.format_report(result, Path("figure.png"), figure_written=False)
+
+    assert "=== Broadest families (most leaf paths) ===" in text
+    assert "=== Narrowest families (least leaf paths) ===" in text
+    assert "# leaf paths" in text
+
+
+def test_format_report_includes_available_leaf_path_count_in_breadth_tables():
+    module = load_module()
+    result = module.analyse_biomes(
+        [
+            (
+                "MGF0001",
+                (
+                    "ids,labels,parents,counts\n"
+                    "root,root,,1\n"
+                    "root:Environmental,Environmental,root,1\n"
+                    "root:Environmental:Soil,Soil,root:Environmental,1\n"
+                ),
+            ),
+            (
+                "MGF0002",
+                (
+                    "ids,labels,parents,counts\n"
+                    "root,root,,2\n"
+                    "root:Environmental,Environmental,root,1\n"
+                    "root:Environmental:Lake,Lake,root:Environmental,1\n"
+                    "root:Host-associated,Host-associated,root,1\n"
+                    "root:Host-associated:Plants,Plants,root:Host-associated,1\n"
+                    "root:Host-associated:Plants:Soil,Soil,root:Host-associated:Plants,1\n"
+                ),
+            ),
+        ]
+    )
+
+    text = module.format_report(result, Path("figure.png"), figure_written=False)
+    mgf0001_rows = [line.split() for line in text.splitlines() if "MGF0001" in line]
+    mgf0002_rows = [line.split() for line in text.splitlines() if "MGF0002" in line]
+
+    assert "Available leaf paths" in text
+    assert "% available" in text
+    assert ["MGF0001", "1", "3", "33.3%", "Environmental"] in mgf0001_rows
+    assert [
+        "MGF0002",
+        "2",
+        "3",
+        "66.7%",
+        "Environmental,",
+        "Host-associated",
+    ] in mgf0002_rows
+
+
+def test_label_bar_values_writes_family_count_on_each_bar():
+    module = load_module()
+
+    class FakeBar:
+        def __init__(self, width, y, height):
+            self._width = width
+            self._y = y
+            self._height = height
+
+        def get_width(self):
+            return self._width
+
+        def get_y(self):
+            return self._y
+
+        def get_height(self):
+            return self._height
+
+    class FakeAxis:
+        def __init__(self):
+            self.labels = []
+
+        def text(self, x, y, text, **kwargs):
+            self.labels.append((x, y, text, kwargs))
+
+    ax = FakeAxis()
+
+    module.label_bar_values(ax, [FakeBar(7, 2, 0.8), FakeBar(12, 5, 0.8)])
+
+    assert ax.labels[0][2] == "7"
+    assert ax.labels[1][2] == "12"
+    assert ax.labels[0][0] > 7
+    assert ax.labels[0][3]["va"] == "center"
+
+
 def test_format_report_can_be_written_to_text_file(tmp_path):
     module = load_module()
     result = module.analyse_biomes(
@@ -199,7 +324,7 @@ def test_format_report_includes_narrowest_families():
 
     text = module.format_report(result, Path("figure.png"), figure_written=False)
 
-    narrowest = text.index("=== Narrowest families (least leaf biomes) ===")
+    narrowest = text.index("=== Narrowest families (least leaf paths) ===")
     assert text.index("  MGF0001", narrowest) < text.index("  MGF0002", narrowest)
 
 
