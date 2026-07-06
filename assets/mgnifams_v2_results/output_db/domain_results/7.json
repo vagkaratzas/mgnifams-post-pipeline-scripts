@@ -1,0 +1,419 @@
+{
+    "architecture_containers": [
+        {
+            "architecture_text": "3",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF12344",
+                    "color": "#fee962",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF12344",
+                    "name": "Ultra-violet resistance protein B",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02151",
+                    "color": "#bf36aa",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02151",
+                    "name": "UvrB/uvrC motif",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF02151",
+                    "color": "#bf36aa",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02151",
+                    "name": "UvrB/uvrC motif",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF12344",
+                    "color": "#fee962",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF12344",
+                    "name": "Ultra-violet resistance protein B",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF04851",
+                    "color": "#ff4317",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04851",
+                    "name": "Type III restriction enzyme, res subunit",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF04851",
+                    "color": "#ff4317",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04851",
+                    "name": "Type III restriction enzyme, res subunit",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF02151",
+                    "color": "#bf36aa",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02151",
+                    "name": "UvrB/uvrC motif",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF12344",
+                    "color": "#fee962",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF12344",
+                    "name": "Ultra-violet resistance protein B",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF04851",
+                    "color": "#ff4317",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04851",
+                    "name": "Type III restriction enzyme, res subunit",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF04851",
+                    "color": "#ff4317",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04851",
+                    "name": "Type III restriction enzyme, res subunit",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF12344",
+                    "color": "#fee962",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF12344",
+                    "name": "Ultra-violet resistance protein B",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF04851",
+                    "color": "#ff4317",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04851",
+                    "name": "Type III restriction enzyme, res subunit",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF12344",
+                    "color": "#fee962",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF12344",
+                    "name": "Ultra-violet resistance protein B",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF04851",
+                    "color": "#ff4317",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04851",
+                    "name": "Type III restriction enzyme, res subunit",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "7",
+                    "color": "#370000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000007",
+                    "name": "MGnifam7",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF12344",
+                    "color": "#fee962",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF12344",
+                    "name": "Ultra-violet resistance protein B",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17757",
+                    "color": "#818ec0",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17757",
+                    "name": "UvrB interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF04851",
+                    "color": "#ff4317",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04851",
+                    "name": "Type III restriction enzyme, res subunit",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00271",
+                    "color": "#1fe794",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00271",
+                    "name": "Helicase conserved C-terminal domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02151",
+                    "color": "#bf36aa",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02151",
+                    "name": "UvrB/uvrC motif",
+                    "font_color": "white"
+                }
+            ]
+        }
+    ]
+}

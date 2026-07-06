@@ -1,0 +1,30 @@
+ids,labels,parents,counts
+root,root,,30
+root:Host-associated,Host-associated,root,13
+root:Host-associated:Human,Human,root:Host-associated,10
+root:Host-associated:Human:Digestive system,Digestive system,root:Host-associated:Human,10
+root:Engineered,Engineered,root,7
+root:Environmental,Environmental,root,7
+root:Environmental:Aquatic,Aquatic,root:Environmental,7
+root:Host-associated:Human:Digestive system:Large intestine,Large intestine,root:Host-associated:Human:Digestive system,7
+root:Engineered:Wastewater,Wastewater,root:Engineered,6
+root:Host-associated:Human:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Human:Digestive system:Large intestine,6
+root:Environmental:Aquatic:Marine,Marine,root:Environmental:Aquatic,5
+root:Engineered:Wastewater:Activated Sludge,Activated Sludge,root:Engineered:Wastewater,4
+root:Mixed,Mixed,root,3
+root:Environmental:Aquatic:Freshwater,Freshwater,root:Environmental:Aquatic,2
+root:Environmental:Aquatic:Freshwater:Groundwater,Groundwater,root:Environmental:Aquatic:Freshwater,1
+root:Engineered:Wastewater:Nutrient removal:Biological phosphorus removal,Biological phosphorus removal,root:Engineered:Wastewater:Nutrient removal,1
+root:Host-associated:Human:Digestive system:Hindgut,Hindgut,root:Host-associated:Human:Digestive system,1
+root:Host-associated:Mammals:Digestive system:Fecal,Fecal,root:Host-associated:Mammals:Digestive system,1
+root:Host-associated:Mammals:Digestive system,Digestive system,root:Host-associated:Mammals,1
+root:Host-associated:Mammals,Mammals,root:Host-associated,1
+root:Engineered:Wastewater:Nutrient removal:Biological phosphorus removal:Activated sludge,Activated sludge,root:Engineered:Wastewater:Nutrient removal:Biological phosphorus removal,1
+root:Engineered:Wastewater:Nutrient removal,Nutrient removal,root:Engineered:Wastewater,1
+root:Host-associated:Birds,Birds,root:Host-associated,1
+root:Engineered:Bioreactor,Bioreactor,root:Engineered,1
+root:Host-associated:Birds:Digestive system,Digestive system,root:Host-associated:Birds,1
+root:Host-associated:Plants:Rhizosphere,Rhizosphere,root:Host-associated:Plants,1
+root:Host-associated:Plants,Plants,root:Host-associated,1
+root:Host-associated:Birds:Digestive system:Digestive tube,Digestive tube,root:Host-associated:Birds:Digestive system,1
+root:Environmental:Aquatic:Freshwater:Lentic,Lentic,root:Environmental:Aquatic:Freshwater,1

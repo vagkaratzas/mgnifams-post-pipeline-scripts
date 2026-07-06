@@ -1,0 +1,31 @@
+ids,labels,parents,counts
+root,root,,31
+root:Environmental,Environmental,root,14
+root:Environmental:Aquatic,Aquatic,root:Environmental,14
+root:Host-associated,Host-associated,root,13
+root:Host-associated:Human,Human,root:Host-associated,10
+root:Environmental:Aquatic:Marine,Marine,root:Environmental:Aquatic,9
+root:Host-associated:Human:Digestive system,Digestive system,root:Host-associated:Human,8
+root:Host-associated:Human:Digestive system:Large intestine,Large intestine,root:Host-associated:Human:Digestive system,6
+root:Host-associated:Human:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Human:Digestive system:Large intestine,5
+root:Engineered,Engineered,root,4
+root:Host-associated:Mammals,Mammals,root:Host-associated,3
+root:Host-associated:Mammals:Digestive system,Digestive system,root:Host-associated:Mammals,3
+root:Environmental:Aquatic:Marine:Oceanic,Oceanic,root:Environmental:Aquatic:Marine,3
+root:Engineered:Wastewater,Wastewater,root:Engineered,2
+root:Environmental:Aquatic:Freshwater,Freshwater,root:Environmental:Aquatic,2
+root:Environmental:Aquatic:Marine:Intertidal zone:Estuary,Estuary,root:Environmental:Aquatic:Marine:Intertidal zone,1
+root:Environmental:Aquatic:Estuary,Estuary,root:Environmental:Aquatic,1
+root:Environmental:Aquatic:Marine:Intertidal zone,Intertidal zone,root:Environmental:Aquatic:Marine,1
+root:Environmental:Aquatic:Marine:Sediment,Sediment,root:Environmental:Aquatic:Marine,1
+root:Environmental:Aquatic:Thermal springs:Hot (42-90C),Hot (42-90C),root:Environmental:Aquatic:Thermal springs,1
+root:Environmental:Aquatic:Thermal springs,Thermal springs,root:Environmental:Aquatic,1
+root:Environmental:Aquatic:Freshwater:Lentic,Lentic,root:Environmental:Aquatic:Freshwater,1
+root:Host-associated:Mammals:Digestive system:Foregut:Rumen,Rumen,root:Host-associated:Mammals:Digestive system:Foregut,1
+root:Host-associated:Human:Skin,Skin,root:Host-associated:Human,1
+root:Engineered:Bioremediation:Terephthalate:Wastewater,Wastewater,root:Engineered:Bioremediation:Terephthalate,1
+root:Engineered:Bioremediation:Terephthalate,Terephthalate,root:Engineered:Bioremediation,1
+root:Engineered:Bioremediation,Bioremediation,root:Engineered,1
+root:Host-associated:Mammals:Digestive system:Foregut,Foregut,root:Host-associated:Mammals:Digestive system,1
+root:Engineered:Bioreactor,Bioreactor,root:Engineered,1
+root:Host-associated:Mammals:Digestive system:Fecal,Fecal,root:Host-associated:Mammals:Digestive system,1

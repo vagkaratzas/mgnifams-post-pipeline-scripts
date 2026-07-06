@@ -1,0 +1,27 @@
+ids,labels,parents,counts
+root,root,,29
+root:Host-associated,Host-associated,root,12
+root:Host-associated:Human,Human,root:Host-associated,12
+root:Host-associated:Human:Digestive system,Digestive system,root:Host-associated:Human,11
+root:Environmental,Environmental,root,11
+root:Environmental:Aquatic,Aquatic,root:Environmental,11
+root:Host-associated:Human:Digestive system:Large intestine,Large intestine,root:Host-associated:Human:Digestive system,7
+root:Engineered,Engineered,root,6
+root:Host-associated:Human:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Human:Digestive system:Large intestine,6
+root:Environmental:Aquatic:Marine,Marine,root:Environmental:Aquatic,5
+root:Environmental:Aquatic:Freshwater,Freshwater,root:Environmental:Aquatic,4
+root:Engineered:Wastewater,Wastewater,root:Engineered,3
+root:Engineered:Wastewater:Activated Sludge,Activated Sludge,root:Engineered:Wastewater,2
+root:Environmental:Aquatic:Marine:Oceanic,Oceanic,root:Environmental:Aquatic:Marine,2
+root:Environmental:Aquatic:Freshwater:Groundwater,Groundwater,root:Environmental:Aquatic:Freshwater,2
+root:Environmental:Aquatic:Estuary:Sediment,Sediment,root:Environmental:Aquatic:Estuary,2
+root:Environmental:Aquatic:Estuary,Estuary,root:Environmental:Aquatic,2
+root:Engineered:Bioremediation,Bioremediation,root:Engineered,1
+root:Engineered:Bioremediation:Terephthalate,Terephthalate,root:Engineered:Bioremediation,1
+root:Engineered:Bioremediation:Terephthalate:Wastewater,Wastewater,root:Engineered:Bioremediation:Terephthalate,1
+root:Environmental:Aquatic:Freshwater:Drinking water,Drinking water,root:Environmental:Aquatic:Freshwater,1
+root:Environmental:Aquatic:Freshwater:Drinking water:Delivery networks,Delivery networks,root:Environmental:Aquatic:Freshwater:Drinking water,1
+root:Engineered:Bioreactor,Bioreactor,root:Engineered,1
+root:Environmental:Aquatic:Freshwater:Lake,Lake,root:Environmental:Aquatic:Freshwater,1
+root:Engineered:Food production,Food production,root:Engineered,1
+root:Engineered:Food production:Fermented vegetables,Fermented vegetables,root:Engineered:Food production,1

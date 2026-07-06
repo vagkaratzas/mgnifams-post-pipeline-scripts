@@ -1,0 +1,37 @@
+ids,labels,parents,counts
+root,root,,74
+root:Host-associated,Host-associated,root,30
+root:Environmental,Environmental,root,25
+root:Environmental:Aquatic,Aquatic,root:Environmental,25
+root:Host-associated:Human,Human,root:Host-associated,24
+root:Host-associated:Human:Digestive system,Digestive system,root:Host-associated:Human,24
+root:Environmental:Aquatic:Marine,Marine,root:Environmental:Aquatic,19
+root:Host-associated:Human:Digestive system:Large intestine,Large intestine,root:Host-associated:Human:Digestive system,17
+root:Engineered,Engineered,root,13
+root:Host-associated:Human:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Human:Digestive system:Large intestine,11
+root:Engineered:Wastewater,Wastewater,root:Engineered,9
+root:Environmental:Aquatic:Marine:Oceanic,Oceanic,root:Environmental:Aquatic:Marine,8
+root:Mixed,Mixed,root,6
+root:Engineered:Wastewater:Activated Sludge,Activated Sludge,root:Engineered:Wastewater,5
+root:Engineered:Wastewater:Water and sludge,Water and sludge,root:Engineered:Wastewater,3
+root:Host-associated:Mammals:Digestive system,Digestive system,root:Host-associated:Mammals,3
+root:Host-associated:Mammals,Mammals,root:Host-associated,3
+root:Environmental:Aquatic:Freshwater,Freshwater,root:Environmental:Aquatic,3
+root:Environmental:Aquatic:Estuary,Estuary,root:Environmental:Aquatic,3
+root:Environmental:Aquatic:Estuary:Sediment,Sediment,root:Environmental:Aquatic:Estuary,3
+root:Host-associated:Plants,Plants,root:Host-associated,3
+root:Engineered:Bioremediation:Terephthalate:Wastewater,Wastewater,root:Engineered:Bioremediation:Terephthalate,2
+root:Host-associated:Plants:Rhizosphere,Rhizosphere,root:Host-associated:Plants,2
+root:Engineered:Bioremediation:Terephthalate,Terephthalate,root:Engineered:Bioremediation,2
+root:Engineered:Bioremediation,Bioremediation,root:Engineered,2
+root:Environmental:Aquatic:Marine:Intertidal zone,Intertidal zone,root:Environmental:Aquatic:Marine,1
+root:Environmental:Aquatic:Marine:Intertidal zone:Estuary,Estuary,root:Environmental:Aquatic:Marine:Intertidal zone,1
+root:Host-associated:Plants:Root,Root,root:Host-associated:Plants,1
+root:Environmental:Aquatic:Marine:Oceanic:Aphotic zone,Aphotic zone,root:Environmental:Aquatic:Marine:Oceanic,1
+root:Engineered:Bioreactor,Bioreactor,root:Engineered,1
+root:Environmental:Aquatic:Freshwater:Lake,Lake,root:Environmental:Aquatic:Freshwater,1
+root:Host-associated:Mammals:Digestive system:Large intestine,Large intestine,root:Host-associated:Mammals:Digestive system,1
+root:Host-associated:Mammals:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Mammals:Digestive system:Large intestine,1
+root:Host-associated:Mammals:Digestive system:Foregut,Foregut,root:Host-associated:Mammals:Digestive system,1
+root:Host-associated:Mammals:Digestive system:Foregut:Rumen,Rumen,root:Host-associated:Mammals:Digestive system:Foregut,1
+root:Environmental:Aquatic:Freshwater:Lentic,Lentic,root:Environmental:Aquatic:Freshwater,1

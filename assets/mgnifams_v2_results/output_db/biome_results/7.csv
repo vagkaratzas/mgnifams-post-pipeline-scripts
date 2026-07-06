@@ -1,0 +1,22 @@
+ids,labels,parents,counts
+root,root,,16
+root:Host-associated,Host-associated,root,7
+root:Host-associated:Human,Human,root:Host-associated,7
+root:Host-associated:Human:Digestive system,Digestive system,root:Host-associated:Human,7
+root:Engineered,Engineered,root,6
+root:Engineered:Wastewater,Wastewater,root:Engineered,2
+root:Mixed,Mixed,root,2
+root:Engineered:Bioreactor,Bioreactor,root:Engineered,2
+root:Host-associated:Human:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Human:Digestive system:Large intestine,2
+root:Host-associated:Human:Digestive system:Large intestine,Large intestine,root:Host-associated:Human:Digestive system,2
+root:Engineered:Food production:Fermented beverages,Fermented beverages,root:Engineered:Food production,1
+root:Environmental,Environmental,root,1
+root:Engineered:Food production,Food production,root:Engineered,1
+root:Environmental:Aquatic:Non-marine Saline and Alkaline,Non-marine Saline and Alkaline,root:Environmental:Aquatic,1
+root:Environmental:Aquatic:Non-marine Saline and Alkaline:Saline,Saline,root:Environmental:Aquatic:Non-marine Saline and Alkaline,1
+root:Environmental:Aquatic:Non-marine Saline and Alkaline:Saline:Microbial mats,Microbial mats,root:Environmental:Aquatic:Non-marine Saline and Alkaline:Saline,1
+root:Engineered:Wastewater:Activated Sludge,Activated Sludge,root:Engineered:Wastewater,1
+root:Engineered:Solid waste,Solid waste,root:Engineered,1
+root:Engineered:Solid waste:Composting,Composting,root:Engineered:Solid waste,1
+root:Engineered:Wastewater:Water and sludge,Water and sludge,root:Engineered:Wastewater,1
+root:Environmental:Aquatic,Aquatic,root:Environmental,1

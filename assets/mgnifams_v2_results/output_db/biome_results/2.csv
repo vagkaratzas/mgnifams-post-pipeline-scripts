@@ -1,0 +1,66 @@
+ids,labels,parents,counts
+root,root,,163
+root:Host-associated,Host-associated,root,69
+root:Environmental,Environmental,root,57
+root:Environmental:Aquatic,Aquatic,root:Environmental,56
+root:Host-associated:Human,Human,root:Host-associated,56
+root:Host-associated:Human:Digestive system,Digestive system,root:Host-associated:Human,53
+root:Environmental:Aquatic:Marine,Marine,root:Environmental:Aquatic,36
+root:Host-associated:Human:Digestive system:Large intestine,Large intestine,root:Host-associated:Human:Digestive system,30
+root:Engineered,Engineered,root,27
+root:Host-associated:Human:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Human:Digestive system:Large intestine,22
+root:Environmental:Aquatic:Marine:Oceanic,Oceanic,root:Environmental:Aquatic:Marine,15
+root:Environmental:Aquatic:Freshwater,Freshwater,root:Environmental:Aquatic,13
+root:Engineered:Wastewater,Wastewater,root:Engineered,11
+root:Mixed,Mixed,root,10
+root:Host-associated:Mammals:Digestive system,Digestive system,root:Host-associated:Mammals,8
+root:Host-associated:Mammals,Mammals,root:Host-associated,8
+root:Engineered:Wastewater:Activated Sludge,Activated Sludge,root:Engineered:Wastewater,6
+root:Engineered:Bioreactor,Bioreactor,root:Engineered,6
+root:Engineered:Biogas plant,Biogas plant,root:Engineered,4
+root:Environmental:Aquatic:Estuary,Estuary,root:Environmental:Aquatic,4
+root:Environmental:Aquatic:Estuary:Sediment,Sediment,root:Environmental:Aquatic:Estuary,4
+root:Host-associated:Plants,Plants,root:Host-associated,4
+root:Engineered:Bioremediation,Bioremediation,root:Engineered,3
+root:Engineered:Bioremediation:Terephthalate:Wastewater,Wastewater,root:Engineered:Bioremediation:Terephthalate,3
+root:Engineered:Bioremediation:Terephthalate,Terephthalate,root:Engineered:Bioremediation,3
+root:Environmental:Aquatic:Freshwater:Groundwater,Groundwater,root:Environmental:Aquatic:Freshwater,3
+root:Host-associated:Plants:Rhizosphere,Rhizosphere,root:Host-associated:Plants,3
+root:Host-associated:Human:Skin,Skin,root:Host-associated:Human,2
+root:Engineered:Biogas plant:Wet fermentation,Wet fermentation,root:Engineered:Biogas plant,2
+root:Host-associated:Mammals:Digestive system:Large intestine,Large intestine,root:Host-associated:Mammals:Digestive system,2
+root:Host-associated:Mammals:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Mammals:Digestive system:Large intestine,2
+root:Environmental:Aquatic:Freshwater:Lentic,Lentic,root:Environmental:Aquatic:Freshwater,2
+root:Engineered:Solid waste,Solid waste,root:Engineered,2
+root:Environmental:Aquatic:Freshwater:Ice:Glacier,Glacier,root:Environmental:Aquatic:Freshwater:Ice,2
+root:Environmental:Aquatic:Freshwater:Ice,Ice,root:Environmental:Aquatic:Freshwater,2
+root:Environmental:Aquatic:Freshwater:Sediment,Sediment,root:Environmental:Aquatic:Freshwater,2
+root:Engineered:Solid waste:Composting,Composting,root:Engineered:Solid waste,2
+root:Host-associated:Mammals:Digestive system:Fecal,Fecal,root:Host-associated:Mammals:Digestive system,2
+root:Engineered:Wastewater:Water and sludge,Water and sludge,root:Engineered:Wastewater,2
+root:Environmental:Aquatic:Thermal springs:Sediment,Sediment,root:Environmental:Aquatic:Thermal springs,1
+root:Environmental:Aquatic:Thermal springs,Thermal springs,root:Environmental:Aquatic,1
+root:Environmental:Aquatic:Freshwater:Lake,Lake,root:Environmental:Aquatic:Freshwater,1
+root:Environmental:Terrestrial:Soil,Soil,root:Environmental:Terrestrial,1
+root:Environmental:Terrestrial,Terrestrial,root:Environmental,1
+root:Host-associated:Birds,Birds,root:Host-associated,1
+root:Host-associated:Birds:Digestive system,Digestive system,root:Host-associated:Birds,1
+root:Host-associated:Birds:Digestive system:Digestive tube,Digestive tube,root:Host-associated:Birds:Digestive system,1
+root:Engineered:Bioreactor:Continuous culture,Continuous culture,root:Engineered:Bioreactor,1
+root:Environmental:Aquatic:Marine:Sediment,Sediment,root:Environmental:Aquatic:Marine,1
+root:Engineered:Bioreactor:Continuous culture:Marine intertidal flat sediment inoculum,Marine intertidal flat sediment inoculum,root:Engineered:Bioreactor:Continuous culture,1
+root:Engineered:Bioreactor:Continuous culture:Marine intertidal flat sediment inoculum:Wadden Sea-Germany,Wadden Sea-Germany,root:Engineered:Bioreactor:Continuous culture:Marine intertidal flat sediment inoculum,1
+root:Environmental:Aquatic:Marine:Intertidal zone:Estuary,Estuary,root:Environmental:Aquatic:Marine:Intertidal zone,1
+root:Environmental:Aquatic:Marine:Coastal:Sediment,Sediment,root:Environmental:Aquatic:Marine:Coastal,1
+root:Host-associated:Plants:Root,Root,root:Host-associated:Plants,1
+root:Environmental:Aquatic:Marine:Intertidal zone,Intertidal zone,root:Environmental:Aquatic:Marine,1
+root:Environmental:Aquatic:Marine:Coastal,Coastal,root:Environmental:Aquatic:Marine,1
+root:Host-associated:Mammals:Digestive system:Foregut:Rumen,Rumen,root:Host-associated:Mammals:Digestive system:Foregut,1
+root:Host-associated:Mammals:Digestive system:Foregut,Foregut,root:Host-associated:Mammals:Digestive system,1
+root:Environmental:Aquatic:Freshwater:Lotic:Sediment,Sediment,root:Environmental:Aquatic:Freshwater:Lotic,1
+root:Environmental:Aquatic:Freshwater:Lotic,Lotic,root:Environmental:Aquatic:Freshwater,1
+root:Environmental:Aquatic:Non-marine Saline and Alkaline:Salt crystallizer pond,Salt crystallizer pond,root:Environmental:Aquatic:Non-marine Saline and Alkaline,1
+root:Environmental:Aquatic:Non-marine Saline and Alkaline,Non-marine Saline and Alkaline,root:Environmental:Aquatic,1
+root:Environmental:Aquatic:Marine:Oceanic:Aphotic zone,Aphotic zone,root:Environmental:Aquatic:Marine:Oceanic,1
+root:Environmental:Aquatic:Aquaculture,Aquaculture,root:Environmental:Aquatic,1
+root:Environmental:Aquatic:Marine:Pelagic,Pelagic,root:Environmental:Aquatic:Marine,1

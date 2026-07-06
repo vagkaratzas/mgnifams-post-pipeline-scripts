@@ -1,0 +1,359 @@
+{
+    "architecture_containers": [
+        {
+            "architecture_text": "25",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "7",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00005",
+                    "color": "#b83245",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00005",
+                    "name": "ABC transporter",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "7",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17755",
+                    "color": "#e5b7e4",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17755",
+                    "name": "UvrA DNA-binding domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17760",
+                    "color": "#22b81e",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17760",
+                    "name": "UvrA interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "4",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17760",
+                    "color": "#22b81e",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17760",
+                    "name": "UvrA interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "3",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17755",
+                    "color": "#e5b7e4",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17755",
+                    "name": "UvrA DNA-binding domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17760",
+                    "color": "#22b81e",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17760",
+                    "name": "UvrA interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00005",
+                    "color": "#b83245",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00005",
+                    "name": "ABC transporter",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00005",
+                    "color": "#b83245",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00005",
+                    "name": "ABC transporter",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17755",
+                    "color": "#e5b7e4",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17755",
+                    "name": "UvrA DNA-binding domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17760",
+                    "color": "#22b81e",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17760",
+                    "name": "UvrA interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17760",
+                    "color": "#22b81e",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17760",
+                    "name": "UvrA interaction domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF17760",
+                    "color": "#22b81e",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17760",
+                    "name": "UvrA interaction domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17755",
+                    "color": "#e5b7e4",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17755",
+                    "name": "UvrA DNA-binding domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF16074",
+                    "color": "#09c53d",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF16074",
+                    "name": "Type IV Pilus-assembly protein W",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF01048",
+                    "color": "#089481",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF01048",
+                    "name": "Phosphorylase superfamily",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF13749",
+                    "color": "#1d3a05",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF13749",
+                    "name": "Putative ATP-dependent DNA helicase recG C-terminal",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "3",
+                    "color": "#330000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000003",
+                    "name": "MGnifam3",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00005",
+                    "color": "#b83245",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00005",
+                    "name": "ABC transporter",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00664",
+                    "color": "#a1913b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00664",
+                    "name": "ABC transporter transmembrane region",
+                    "font_color": "black"
+                }
+            ]
+        }
+    ]
+}

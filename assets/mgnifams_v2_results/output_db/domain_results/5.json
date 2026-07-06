@@ -1,0 +1,443 @@
+{
+    "architecture_containers": [
+        {
+            "architecture_text": "8",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "3",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "3",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF01336",
+                    "color": "#cc3dda",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF01336",
+                    "name": "OB-fold nucleic acid binding domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF14579",
+                    "color": "#44d592",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF14579",
+                    "name": "Helix-hairpin-helix motif",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17657",
+                    "color": "#ddf789",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17657",
+                    "name": "Bacterial DNA polymerase III alpha subunit finger domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00929",
+                    "color": "#5ac6c8",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00929",
+                    "name": "Exonuclease",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF14579",
+                    "color": "#44d592",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF14579",
+                    "name": "Helix-hairpin-helix motif",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17657",
+                    "color": "#ddf789",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17657",
+                    "name": "Bacterial DNA polymerase III alpha subunit finger domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF14579",
+                    "color": "#44d592",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF14579",
+                    "name": "Helix-hairpin-helix motif",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17657",
+                    "color": "#ddf789",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17657",
+                    "name": "Bacterial DNA polymerase III alpha subunit finger domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF03717",
+                    "color": "#6473d5",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF03717",
+                    "name": "Penicillin-binding Protein dimerisation domain",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF14579",
+                    "color": "#44d592",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF14579",
+                    "name": "Helix-hairpin-helix motif",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17657",
+                    "color": "#ddf789",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17657",
+                    "name": "Bacterial DNA polymerase III alpha subunit finger domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF01336",
+                    "color": "#cc3dda",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF01336",
+                    "name": "OB-fold nucleic acid binding domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF03553",
+                    "color": "#ae3dbb",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF03553",
+                    "name": "Na+/H+ antiporter family",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00929",
+                    "color": "#5ac6c8",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00929",
+                    "name": "Exonuclease",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "5",
+                    "color": "#350000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000005",
+                    "name": "MGnifam5",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF07733",
+                    "color": "#b9f534",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF07733",
+                    "name": "Bacterial DNA polymerase III alpha NTPase domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF14579",
+                    "color": "#44d592",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF14579",
+                    "name": "Helix-hairpin-helix motif",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF17657",
+                    "color": "#ddf789",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF17657",
+                    "name": "Bacterial DNA polymerase III alpha subunit finger domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF02811",
+                    "color": "#8cd44b",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF02811",
+                    "name": "PHP domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF01336",
+                    "color": "#cc3dda",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF01336",
+                    "name": "OB-fold nucleic acid binding domain",
+                    "font_color": "black"
+                }
+            ]
+        }
+    ]
+}

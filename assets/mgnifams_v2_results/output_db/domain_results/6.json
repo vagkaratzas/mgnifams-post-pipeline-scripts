@@ -1,0 +1,360 @@
+{
+    "architecture_containers": [
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00122",
+                    "color": "#c85175",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00122",
+                    "name": "E1-E2 ATPase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "2",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00122",
+                    "color": "#c85175",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00122",
+                    "name": "E1-E2 ATPase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF04945",
+                    "color": "#405584",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF04945",
+                    "name": "YHS domain",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF13473",
+                    "color": "#a102dd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF13473",
+                    "name": "Cupredoxin-like domain",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00122",
+                    "color": "#c85175",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00122",
+                    "name": "E1-E2 ATPase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00122",
+                    "color": "#c85175",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00122",
+                    "name": "E1-E2 ATPase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF12156",
+                    "color": "#238ff6",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF12156",
+                    "name": "Putative metal-binding domain of cation transport ATPase",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00122",
+                    "color": "#c85175",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00122",
+                    "name": "E1-E2 ATPase",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00122",
+                    "color": "#c85175",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00122",
+                    "name": "E1-E2 ATPase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00122",
+                    "color": "#c85175",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00122",
+                    "name": "E1-E2 ATPase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00702",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00702",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF08282",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF08282",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                }
+            ]
+        },
+        {
+            "architecture_text": "1",
+            "domains": [
+                {
+                    "id": "6",
+                    "color": "#360000",
+                    "link": "http://mgnifams-demo.mgnify.org/details/MGYF0000000006",
+                    "name": "MGnifam6",
+                    "font_color": "white"
+                },
+                {
+                    "id": "PF00403",
+                    "color": "#b284bd",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF00403",
+                    "name": "Heavy-metal-associated domain",
+                    "font_color": "black"
+                },
+                {
+                    "id": "PF08282",
+                    "color": "#548505",
+                    "link": "https://www.ebi.ac.uk/interpro/entry/pfam/PF08282",
+                    "name": "haloacid dehalogenase-like hydrolase",
+                    "font_color": "white"
+                }
+            ]
+        }
+    ]
+}

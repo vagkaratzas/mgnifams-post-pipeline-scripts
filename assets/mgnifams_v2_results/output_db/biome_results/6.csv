@@ -1,0 +1,16 @@
+ids,labels,parents,counts
+root,root,,14
+root:Host-associated,Host-associated,root,11
+root:Host-associated:Human,Human,root:Host-associated,10
+root:Host-associated:Human:Digestive system,Digestive system,root:Host-associated:Human,10
+root:Host-associated:Human:Digestive system:Large intestine,Large intestine,root:Host-associated:Human:Digestive system,7
+root:Host-associated:Human:Digestive system:Large intestine:Fecal,Fecal,root:Host-associated:Human:Digestive system:Large intestine,5
+root:Environmental,Environmental,root,1
+root:Environmental:Aquatic,Aquatic,root:Environmental,1
+root:Environmental:Aquatic:Freshwater,Freshwater,root:Environmental:Aquatic,1
+root:Environmental:Aquatic:Freshwater:Lake,Lake,root:Environmental:Aquatic:Freshwater,1
+root:Mixed,Mixed,root,1
+root:Engineered,Engineered,root,1
+root:Host-associated:Mammals,Mammals,root:Host-associated,1
+root:Host-associated:Mammals:Digestive system,Digestive system,root:Host-associated:Mammals,1
+root:Host-associated:Mammals:Digestive system:Fecal,Fecal,root:Host-associated:Mammals:Digestive system,1
