@@ -66,8 +66,8 @@ def test_appends_missing_ids_as_singletons_and_sorts_by_size(tmp_path):
             module.Edge("10", "11", 0.5),
         ]
     )
-    report_csv = tmp_path / "superfamily_statistics.csv"
-    singleton_ids = tmp_path / "singleton_ids.txt"
+    report_csv = tmp_path / "clan_membership.csv"
+    singleton_ids = tmp_path / "unclustered_mgnifam_ids.txt"
 
     graph_clusters = module.summarise_clusters(graph)
     singletons = module.singleton_clusters_for_missing_ids(graph, min_id=1, max_id=12)
@@ -133,6 +133,6 @@ def test_default_output_path_uses_network_subdirectory(tmp_path):
     module = load_module()
     input_csv = tmp_path / "similarity_mqc.csv"
 
-    assert module.default_output_path(input_csv, "superfamily_statistics.csv") == (
-        tmp_path / "network" / "superfamily_statistics.csv"
+    assert module.default_output_path(input_csv, "clan_membership.csv") == (
+        tmp_path / "network" / "clan_membership.csv"
     )

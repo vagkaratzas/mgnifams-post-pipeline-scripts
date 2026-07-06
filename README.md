@@ -29,14 +29,14 @@ python bin/biome_analysis.py <path/to/mgnifams.sqlite3> \
 ## bin/extract_true_novel_superfamilies.py
 Writes a TXT list of true-novel superfamily ids. A superfamily is included only
 when every member family listed in the `Family Ids` column of
-`superfamily_statistics.csv` is present in `novel_ids.txt`.
+`clan_membership.csv` is present in `mgnifams_no_annotation_ids.txt`.
 
 Default inputs:
-- `assets/mgnifams_v2_results/generate_families/novel/novel_ids.txt`
-- `assets/mgnifams_v2_results/generate_families/network/superfamily_statistics.csv`
+- `assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt`
+- `assets/mgnifams_v2_results/generate_families/network/clan_membership.csv`
 
 Default output:
-`assets/mgnifams_v2_results/generate_families/network/true_novel_superfamilies.txt`
+`assets/mgnifams_v2_results/generate_families/network/true_novel_clans.txt`
 
 ```
 python bin/extract_true_novel_superfamilies.py
@@ -45,25 +45,25 @@ python bin/extract_true_novel_superfamilies.py
 Custom paths can be supplied with:
 
 ```
-python bin/extract_true_novel_superfamilies.py <path/to/novel_ids.txt> \
-  <path/to/superfamily_statistics.csv> \
-  --output <path/to/true_novel_superfamilies.txt>
+python bin/extract_true_novel_superfamilies.py <path/to/mgnifams_no_annotation_ids.txt> \
+  <path/to/clan_membership.csv> \
+  --output <path/to/true_novel_clans.txt>
 ```
 
 ## bin/calculate_true_novel_superfamily_novelty.py
-Filters `superfamily_statistics.csv` down to the true-novel superfamilies listed
-in `true_novel_superfamilies.txt`, computes a percentage novelty score for each
+Filters `clan_membership.csv` down to the true-novel superfamilies listed
+in `true_novel_clans.txt`, computes a percentage novelty score for each
 row from the family IDs present in `input/mgnifams_l100_plddt70_novel.csv`,
 drops rows with no matching family IDs, and sorts the output by novelty score
 descending, then family size descending.
 
 Default inputs:
 - `input/mgnifams_l100_plddt70_novel.csv`
-- `assets/mgnifams_v2_results/generate_families/network/superfamily_statistics.csv`
-- `assets/mgnifams_v2_results/generate_families/novel/true_novel_superfamilies.txt`
+- `assets/mgnifams_v2_results/generate_families/network/clan_membership.csv`
+- `assets/mgnifams_v2_results/generate_families/novel/true_novel_clans.txt`
 
 Default output:
-`assets/mgnifams_v2_results/generate_families/network/true_novel_superfamily_novelty_scores.csv`
+`assets/mgnifams_v2_results/generate_families/network/true_novel_clan_l100_plddt70_scores.csv`
 
 ```
 python bin/calculate_true_novel_superfamily_novelty.py
@@ -74,9 +74,9 @@ Custom paths can be supplied with:
 ```
 python bin/calculate_true_novel_superfamily_novelty.py \
   <path/to/mgnifams_l100_plddt70_novel.csv> \
-  <path/to/superfamily_statistics.csv> \
-  <path/to/true_novel_superfamilies.txt> \
-  --output <path/to/true_novel_superfamily_novelty_scores.csv>
+  <path/to/clan_membership.csv> \
+  <path/to/true_novel_clans.txt> \
+  --output <path/to/true_novel_clan_l100_plddt70_scores.csv>
 ```
 
 ## bin/build_superfamilies.py
@@ -95,9 +95,9 @@ Default input:
 
 Default outputs are written under
 `assets/mgnifams_v2_results/generate_families/network/`:
-- `similarity_filtered_superfamilies.csv`
-- `singleton_ids.txt`
-- `superfamily_statistics.csv`
+- `similarity_mapped_mgnifams.csv`
+- `unclustered_mgnifam_ids.txt`
+- `clan_membership.csv`
 - `total_families.txt`
 - `superfamily_size_distribution_2_to_10.png`
 - `superfamily_size_distribution_11_plus.png`
@@ -111,8 +111,8 @@ Custom paths can be supplied with:
 ```
 python bin/build_superfamilies.py <path/to/similarity_mqc.csv> \
   --filtered-csv <path/to/filtered_edges.csv> \
-  --singleton-ids <path/to/singleton_ids.txt> \
-  --report-csv <path/to/superfamily_statistics.csv> \
+  --singleton-ids <path/to/unclustered_mgnifam_ids.txt> \
+  --report-csv <path/to/clan_membership.csv> \
   --total-families <path/to/total_families.txt> \
   --plot-small-png <path/to/superfamily_size_distribution_2_to_10.png> \
   --plot-large-png <path/to/superfamily_size_distribution_11_plus.png>

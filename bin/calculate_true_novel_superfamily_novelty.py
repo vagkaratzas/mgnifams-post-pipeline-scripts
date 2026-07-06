@@ -11,14 +11,14 @@ DEFAULT_NOVEL_FILTERED_MGNIFAMS = Path(
     "input/mgnifams_l100_plddt70_novel.csv"
 )
 DEFAULT_SUPERFAMILY_STATISTICS = Path(
-    "assets/mgnifams_v2_results/generate_families/network/superfamily_statistics.csv"
+    "assets/mgnifams_v2_results/generate_families/network/clan_membership.csv"
 )
 DEFAULT_TRUE_NOVEL_SUPERFAMILIES = Path(
-    "assets/mgnifams_v2_results/generate_families/novel/true_novel_superfamilies.txt"
+    "assets/mgnifams_v2_results/generate_families/novel/true_novel_clans.txt"
 )
 DEFAULT_OUTPUT = Path(
     "assets/mgnifams_v2_results/generate_families/network/"
-    "true_novel_superfamily_novelty_scores.csv"
+    "true_novel_clan_l100_plddt70_scores.csv"
 )
 
 

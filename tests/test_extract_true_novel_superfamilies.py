@@ -20,9 +20,9 @@ def load_module():
 
 def test_selects_superfamilies_where_all_member_families_are_novel(tmp_path):
     module = load_module()
-    novel_ids = tmp_path / "novel_ids.txt"
-    stats_csv = tmp_path / "superfamily_statistics.csv"
-    output_txt = tmp_path / "true_novel_superfamilies.txt"
+    novel_ids = tmp_path / "mgnifams_no_annotation_ids.txt"
+    stats_csv = tmp_path / "clan_membership.csv"
+    output_txt = tmp_path / "true_novel_clans.txt"
 
     novel_ids.write_text("1\n2\n3\n8\n")
     stats_csv.write_text(
