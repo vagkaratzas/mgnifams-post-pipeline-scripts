@@ -50,6 +50,38 @@ python bin/extract_true_novel_superfamilies.py <path/to/mgnifams_no_annotation_i
   --output <path/to/true_novel_clans.txt>
 ```
 
+## bin/annotate_novel_through_domain_architecture.py
+Parses `domain_blob` JSON from the `mgnifam` SQLite table for the novel family
+ids listed in `mgnifams_no_annotation_ids.txt`, extracts unique Pfam ids from
+each domain architecture, and reports true-novel clans/singletons whose member
+families gained Pfam annotations through those architectures.
+
+Default inputs:
+- `assets/mgnifams_v2_results/mgnifams_test.sqlite3`
+- `assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt`
+- `assets/mgnifams_v2_results/generate_families/network/clan_membership.csv`
+
+Default outputs:
+- `assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_annotate_novel_through_domain_architecture.csv`
+- `assets/mgnifams_v2_results/generate_families/network/transiently_annotated_clans.csv`
+- `assets/mgnifams_v2_results/generate_families/novel/true_novel_without_annotate_novel_through_domain_architecture.txt`
+
+```
+python bin/annotate_novel_through_domain_architecture.py
+```
+
+Custom paths can be supplied with:
+
+```
+python bin/annotate_novel_through_domain_architecture.py \
+  --sqlite <path/to/mgnifams.sqlite3> \
+  --novel-ids <path/to/mgnifams_no_annotation_ids.txt> \
+  --clan-membership <path/to/clan_membership.csv> \
+  --family-pfams-output <path/to/family_pfams.csv> \
+  --clan-output <path/to/transiently_annotated_clans.csv> \
+  --true-novel-output <path/to/true_novel_without_pfams.txt>
+```
+
 ## bin/calculate_true_novel_superfamily_novelty.py
 Filters `clan_membership.csv` down to the true-novel superfamilies listed
 in `true_novel_clans.txt`, computes a percentage novelty score for each
