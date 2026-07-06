@@ -7,14 +7,14 @@ from typing import List, NamedTuple, Set
 
 
 DEFAULT_NOVEL_IDS = Path(
-    "assets/mgnifams_v2_results/generate_families/novel/novel_ids.txt"
+    "assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt"
 )
 DEFAULT_SUPERFAMILY_STATISTICS = Path(
-    "assets/mgnifams_v2_results/generate_families/network/superfamily_statistics.csv"
+    "assets/mgnifams_v2_results/generate_families/network/clan_membership.csv"
 )
 DEFAULT_OUTPUT = Path(
     "assets/mgnifams_v2_results/generate_families/novel/"
-    "true_novel_superfamilies.txt"
+    "true_novel_clans.txt"
 )
 
 

@@ -339,15 +339,15 @@ def main():
     input_csv = args.input_csv
     filtered_csv = Path(
         args.filtered_csv
-        or default_output_path(input_csv, "similarity_filtered_superfamilies.csv")
+        or default_output_path(input_csv, "similarity_mapped_mgnifams.csv.csv")
     )
     report_csv = Path(
         args.report_csv
-        or default_output_path(input_csv, "superfamily_statistics.csv")
+        or default_output_path(input_csv, "clan_membership.csv")
     )
     singleton_ids = Path(
         args.singleton_ids
-        or default_output_path(input_csv, "singleton_ids.txt")
+        or default_output_path(input_csv, "unclustered_mgnifam_ids.txt")
     )
     plot_small_png = Path(
         args.plot_small_png

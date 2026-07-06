@@ -21,8 +21,8 @@ def load_module():
 def test_filters_true_novel_superfamilies_without_novel_filtered_hits(tmp_path):
     module = load_module()
     novel_filtered_csv = tmp_path / "novel_filtered.csv"
-    stats_csv = tmp_path / "superfamily_statistics.csv"
-    true_novel_txt = tmp_path / "true_novel_superfamilies.txt"
+    stats_csv = tmp_path / "clan_membership.csv"
+    true_novel_txt = tmp_path / "true_novel_clans.txt"
 
     novel_filtered_csv.write_text(
         "ID,Full size\n"
