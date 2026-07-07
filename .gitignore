@@ -8,6 +8,10 @@ novel
 .nextflow.log*
 work/
 
+nmpfamsdb.hmm.gz
+metadata_mqc_codon.csv
+unclustered_166*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

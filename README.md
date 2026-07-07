@@ -82,6 +82,19 @@ python bin/annotate_novel_through_domain_architecture.py \
   --true-novel-output <path/to/true_novel_without_pfams.txt>
 ```
 
+## bin/extract_family_sequences_fasta.py
+Writes FASTA records from `metadata_mqc.csv` for families listed in a TXT file.
+The FASTA header is the `Family Id` value, and the sequence is taken from the
+`Sequence` column. Input selector IDs such as `Singleton_243` are matched by the
+second underscore-delimited field, so `Singleton_243` selects `Family Id` `243`.
+
+```
+python bin/extract_family_sequences_fasta.py \
+  assets/mgnifams_v2_results/generate_families/metadata_mqc.csv \
+  assets/mgnifams_v2_results/generate_families/novel/true_novel_without_annotate_novel_through_domain_architecture.txt \
+  --output assets/mgnifams_v2_results/generate_families/novel/true_novel_without_annotate_novel_through_domain_architecture.fasta
+```
+
 ## bin/calculate_true_novel_superfamily_novelty.py
 Filters `clan_membership.csv` down to the true-novel superfamilies listed
 in `true_novel_clans.txt`, computes a percentage novelty score for each
