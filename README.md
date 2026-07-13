@@ -172,6 +172,49 @@ Updates seed MSA blobs (used after trimming off env coords)
 ## bin/trim_seed_msa_envelopes.py
 Trims off any start/end parts of seed MSA sequences that belong to the envelope and re-calculates the sequence coordinates appropriately.
 
+## bin/plot_mgnifam_metadata_distributions.py
+Family-level distribution figures for the catalogue (paper Figure X). Every panel is a stacked
+barplot of annotated vs unannotated (novel) families, where novel ids are read from
+`mgnifams_no_annotation_ids.txt`; the percentage above each bar is the share of unannotated
+families in that bin.
+
+Panels (`--mode`, default `all`):
+- `size` — family size (sequences in the full alignment) → 3 PNGs (small / medium / large)
+- `length` — representative sequence length in aa (== HMM match states) → 3 PNGs (short / medium / long)
+- `plddt` — mean pLDDT of the representative structure → 1 PNG
+- `ptm` — pTM of the representative structure → 1 PNG
+
+Size and length are split into 3 PNGs each because their ranges (29–1,515,677 sequences and
+75–2,000 aa) cannot be binned legibly on a single linear axis. Group cuts are half-open, so each
+cut lands on a bin edge. Also writes `<prefix>_stats.txt` with min/Q1/median/Q3/max/mean per
+metric, reported overall and split by annotated vs novel — the numbers quoted in the manuscript.
+
+Input is the `mgnifam` table CSV (`id,full_size,rep_length,...,plddt,ptm`), i.e.
+`table_data/mgnifam.csv` or the full-catalogue `mgnifam_codon.csv`.
+
+```
+python bin/plot_mgnifam_metadata_distributions.py \
+  --metadata mgnifam_codon.csv \
+  --novel-ids assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt \
+  --output-prefix output/mgnifam_metadata
+```
+
+Bin sizes and split thresholds are tunable; defaults are tuned to the full 35,459-family
+catalogue, so a small test dataset needs smaller ones:
+
+```
+python bin/plot_mgnifam_metadata_distributions.py \
+  --metadata assets/mgnifams_v2_results/table_data/mgnifam.csv \
+  --novel-ids assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt \
+  --output-prefix output/test_mgnifam_metadata \
+  --mode all \
+  --size-small-max 100 --size-medium-max 1000 \
+  --size-small-bin 20 --size-medium-bin 200 --size-large-bin 1000 \
+  --length-short-max 120 --length-medium-max 200 \
+  --length-short-bin 10 --length-medium-bin 20 --length-long-bin 50 \
+  --plddt-bin 5 --ptm-bin 0.05
+```
+
 ## bin/plot_family_length_distribution.py
 Produces 3 stacked bar chart PNGs of family distribution by annotation status, split into short,
 medium, and long groups. Binning and splitting can be done by HMM consensus length (aa) or family
