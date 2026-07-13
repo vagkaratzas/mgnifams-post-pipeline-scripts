@@ -10,6 +10,7 @@ work/
 
 nmpfamsdb.hmm.gz
 metadata_mqc_codon.csv
+mgnifam_codon.csv
 unclustered_166*
 
 # Byte-compiled / optimized / DLL files
