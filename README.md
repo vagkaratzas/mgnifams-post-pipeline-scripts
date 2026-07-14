@@ -2,14 +2,67 @@
 Contains post-processing scripts for various stats, after the main MGnifams pipeline finishes execution
 
 ## bin/synteny_census.py
+Tests whether an MGnifam family sits recurrently next to a given Pfam set (gene
+neighbourhood / synteny) by querying the MGnify proteins parquet store with DuckDB.
+
+Given a text file of family member `protein_id`s (MSA-style `/start-end` suffixes and an
+optional `MGYP` prefix are stripped), it:
+
+1. maps each `protein_id` → `contig_id` (metadata parquet) — **skipped with `--contigs`**
+2. pulls every gene on those contigs, i.e. the neighbourhoods (metadata parquet)
+3. attaches Pfam annotations to all neighbourhood genes (pfam parquet)
+4. orders genes per contig, locates the family anchor gene(s), and tests adjacency to the
+   `--targets` Pfams within a window of `--window-genes` genes **or** `--window-bp` bp
+5. classifies each contig, dereplicates positives by `cluster_rep` (independence), records
+   strand co-directionality, and prints a numerator/denominator VERDICT
+
+Contig classes: `POSITIVE` (target adjacent) · `NEGATIVE` (confident — the full window fits
+on the contig) · `NEGATIVE_PARTIAL` (one side truncated by a contig edge) · `AMBIGUOUS_EDGE`
+(both sides truncated) · `ISOLATED` (anchor is the only gene on the fragment). Contig edges
+come from `metadata.contig_length` when present, else from the span of the called genes.
+Pfam accessions are canonicalised, so `PF01183`, `pf01183.7` and the bare integer `1183`
+(how the pfam parquet stores them) all compare equal.
 
 Run it:
 
 ```
-python synteny_census.py ids.txt \
+python bin/synteny_census.py ids.txt \
   --metadata /path/mgy_proteins_metadata.parquet \
   --pfam     /path/mgy_proteins_pfam.parquet \
+  --id-strip-prefix MGYP \
+  --targets PF01183,PF25309 \
   --threads 16 --memory-limit 64GB
+```
+
+Outputs, written to `--outdir` (default `output/synteny/`):
+- `log.txt` — timestamped progress, mirrored to the console
+- `synteny_anchors.tsv` — one row per anchor gene occurrence
+- `synteny_contigs.tsv` — one row per contig (POSITIVE if any anchor on it is)
+- `synteny_maps.txt` — ASCII gene maps of each anchor-bearing contig
+- `synteny_verdict.txt` — the printed summary
+
+Useful options:
+
+```
+python bin/synteny_census.py ids.txt \
+  --metadata /path/mgy_proteins_metadata.parquet \
+  --pfam     /path/mgy_proteins_pfam.parquet \
+  --contigs  contig_ids.txt \
+  --context-pfams PF13472 \
+  --window-genes 5 --window-bp 10000 --small-orf-aa 120 \
+  --outdir output/synteny --out-prefix synteny
+```
+
+`--contigs` takes a file of `contig_id`s already known to carry the family and **skips step
+1** — a full `protein_id` scan of a ~6-billion-row parquet — so pass it whenever the mapping
+is already known. The anchors are recovered from step 2 instead, and the results are
+identical. Note the metadata is occurrence-level: a `protein_id` can sit on many contigs, so
+the `--contigs` file is usually much longer than the ids file.
+
+Self-check (synthetic fixtures, exercises the classifier and the `--contigs` skip):
+
+```
+python bin/synteny_census.py --self-test
 ```
 
 ## bin/biome_analysis.py
