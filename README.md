@@ -178,25 +178,37 @@ barplot of annotated vs unannotated (novel) families, where novel ids are read f
 `mgnifams_no_annotation_ids.txt`; the percentage above each bar is the share of unannotated
 families in that bin.
 
-Panels (`--mode`, default `all`):
-- `size` — family size (sequences in the full alignment) → 3 PNGs (small / medium / large)
-- `length` — representative sequence length in aa (== HMM match states) → 3 PNGs (short / medium / long)
-- `plddt` — mean pLDDT of the representative structure → 1 PNG
-- `ptm` — pTM of the representative structure → 1 PNG
+Output is split by where the plot is meant to end up (`--mode`, default `all`):
 
-Size and length are split into 3 PNGs each because their ranges (29–1,515,677 sequences and
-75–2,000 aa) cannot be binned legibly on a single linear axis. Group cuts are half-open, so each
-cut lands on a bin edge. Also writes `<prefix>_stats.txt` with min/Q1/median/Q3/max/mean per
-metric, reported overall and split by annotated vs novel — the numbers quoted in the manuscript.
+**`figure` → `<output-dir>/figures/`** — the main-text Figure X, one panel per claim in the
+manuscript paragraph:
+- **A** `figure_Xa_size.png` — family size, log₁₀ bins, full range
+- **B** `figure_Xb_length.png` — representative sequence length (== HMM match states), 100-aa bins, full range
+- **C** `figure_Xc_plddt.png` — mean pLDDT of the representative structure, 5-unit bins
+- `figure_X_family_metadata.png` / `.pdf` — the three panels combined and lettered A/B/C, 600 dpi
 
-Input is the `mgnifam` table CSV (`id,full_size,rep_length,...,plddt,ptm`), i.e.
-`table_data/mgnifam.csv` or the full-catalogue `mgnifam_codon.csv`.
+Size uses log₁₀ bins here because its range (29–1,515,677) cannot be binned legibly on a linear
+axis; a single panel is what lets the reader see the full span *and* the annotated/novel shift.
+Length needs no such trick — 75–2,000 aa fits one panel at 100-aa bins.
+
+**`supplementary` → `<output-dir>/supplementary_figures/`** — the fine-grained view behind panels
+A and B, plus the companion structural metric:
+- `size_{small,medium,large}.png` — linear bins, half-open cuts so each cut lands on a bin edge
+- `length_{short,medium,long}.png` — same
+- `ptm.png` — pTM of the representative structure
+
+Also writes `<output-dir>/mgnifam_metadata_stats.txt` with min/Q1/median/Q3/max/mean per metric,
+reported overall and split by annotated vs novel — the numbers quoted in the manuscript.
+
+Input is the `mgnifam` table CSV (`id,full_size,rep_length,...,plddt,ptm`): the full-catalogue
+`mgnifam_codon.csv`, or `table_data/mgnifam.csv` for a quick test. Note this is *not* the
+MultiQC `metadata_mqc*.csv`, which carries no pLDDT/pTM columns.
 
 ```
 python bin/plot_mgnifam_metadata_distributions.py \
   --metadata mgnifam_codon.csv \
   --novel-ids assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt \
-  --output-prefix output/mgnifam_metadata
+  --output-dir output
 ```
 
 Bin sizes and split thresholds are tunable; defaults are tuned to the full 35,459-family
@@ -206,7 +218,7 @@ catalogue, so a small test dataset needs smaller ones:
 python bin/plot_mgnifam_metadata_distributions.py \
   --metadata assets/mgnifams_v2_results/table_data/mgnifam.csv \
   --novel-ids assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt \
-  --output-prefix output/test_mgnifam_metadata \
+  --output-dir output/test \
   --mode all \
   --size-small-max 100 --size-medium-max 1000 \
   --size-small-bin 20 --size-medium-bin 200 --size-large-bin 1000 \
