@@ -9,6 +9,7 @@ Given a plain-text list of family member protein_ids (e.g. exported from a seed 
 MSA), it:
 
   1. maps each protein_id  ->  contig_id                  (metadata parquet, query 1)
+     -- SKIPPED when --contigs is supplied (the contig_ids are already known)
   2. pulls EVERY gene on those contigs (the neighbourhoods) (metadata parquet, query 2)
   3. attaches Pfam annotations to all neighbourhood genes   (pfam parquet,     query 3)
   4. orders genes per contig, locates the family 'anchor' gene(s), extracts the
@@ -18,10 +19,8 @@ MSA), it:
      / ISOLATED, dereplicates positives by cluster_rep (independence), records strand
      co-directionality, and prints a numerator/denominator VERDICT.
 
-The three SQL steps are the ones supplied by the user, adapted so that query 2 returns
-the *whole* contig (all genes), which is what a neighbourhood requires -- the literal
-`AND protein_id IN (...)` in the original query 2 would return only the family genes and
-leave no neighbours to analyse.
+Query 2 returns the *whole* contig (all genes), which is what a neighbourhood requires --
+restricting it to the family protein_ids would leave no neighbours to analyse.
 
 Notes / assumptions
 -------------------
@@ -29,10 +28,11 @@ Notes / assumptions
   literals: far cheaper on a 6B-row scan and injection-safe.
 * protein_id / contig_id column types are read from the parquet schema and the input ids
   are CAST to match, so the script works whether ids are integers or strings.
-* Contig boundaries are approximated by the span of called genes (we have gene coords,
-  not contig length); an anchor closer than --window-bp to the nearest called-gene edge
-  is treated as sitting at a possible assembly/annotation break -> its 'no-hit' side is
-  ambiguous, never a confident negative.
+* Pfam accessions are canonicalised to PFxxxxx, so 'PF02566', 'pf2566' and the bare
+  integer 2566 (how the pfam parquet stores them) all compare equal.
+* Contig edges come from metadata.contig_length when present, else from the span of the
+  called genes. An anchor closer than --window-bp to a contig edge has a truncated
+  window: its 'no-hit' side is ambiguous, never a confident negative.
 * Performance depends on the parquet layout. If these scans are slow, partitioning or
   sorting the metadata parquet by contig_id (and/or protein_id) enables row-group
   pruning; pass --threads / --memory-limit to tune DuckDB.
@@ -42,13 +42,18 @@ Usage
     python synteny_census.py ids.txt \
         --metadata /path/to/mgy_proteins_metadata.parquet \
         --pfam     /path/to/mgy_proteins_pfam.parquet \
+        [--contigs contig_ids.txt] \
         [--targets PF01183,PF25309] [--context-pfams PF13472] \
         [--window-genes 5] [--window-bp 10000] \
         [--small-orf-aa 120] [--id-strip-prefix MGYP] \
-        [--out-prefix synteny] [--threads 8] [--memory-limit 32GB]
+        [--outdir output/synteny] [--out-prefix synteny] \
+        [--threads 8] [--memory-limit 32GB]
+
+    python synteny_census.py --self-test      # synthetic end-to-end check
 """
 
 import argparse
+import logging
 import os
 import re
 import sys
@@ -58,11 +63,20 @@ import duckdb
 import pandas as pd
 
 
+LOG = logging.getLogger("synteny")
+
+
 # ----------------------------------------------------------------------------------
 # small helpers
 # ----------------------------------------------------------------------------------
-def log(msg):
-    print(msg, file=sys.stderr, flush=True)
+def setup_logging(log_path):
+    """Console (stderr) + log.txt, same messages in both."""
+    LOG.setLevel(logging.INFO)
+    LOG.handlers.clear()
+    fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%Y-%m-%d %H:%M:%S")
+    for h in (logging.StreamHandler(sys.stderr), logging.FileHandler(log_path, mode="w")):
+        h.setFormatter(fmt)
+        LOG.addHandler(h)
 
 
 def read_ids(path, strip_prefix=None):
@@ -100,13 +114,14 @@ def is_int_type(dtype):
     return "INT" in dtype.upper() and "POINT" not in dtype.upper()
 
 
-def sanitise_ids_for_type(ids, dtype):
+def sanitise_ids_for_type(ids, dtype, what="id"):
     """If the column is integer, keep only numeric ids (warn on drops)."""
     if is_int_type(dtype):
         good = [i for i in ids if re.fullmatch(r"-?\d+", i)]
         dropped = len(ids) - len(good)
         if dropped:
-            log(f"  ! {dropped} id(s) are non-numeric but the column is {dtype}; dropped.")
+            LOG.warning("%d %s(s) are non-numeric but the column is %s; dropped.",
+                        dropped, what, dtype)
         return good
     return ids
 
@@ -118,8 +133,12 @@ def strand_to_int(s):
     return m.get(str(s).strip().lower(), 0)
 
 
-def strip_pfam_version(acc):
-    return str(acc).split(".", 1)[0].upper().strip()
+def pfam_key(acc):
+    """Canonical PFxxxxx. Accepts 'PF01183', 'PF01183.2', 'pf1183', 1183, '1183'."""
+    s = str(acc).strip().upper().split(".", 1)[0]
+    if s.startswith("PF"):
+        s = s[2:]
+    return f"PF{int(s):05d}" if s.isdigit() else s
 
 
 def bp_gap(a_start, a_end, b_start, b_end):
@@ -135,10 +154,10 @@ def aa_len(start, end):
 
 
 # ----------------------------------------------------------------------------------
-# DuckDB queries (the three user-supplied steps, combined)
+# DuckDB queries
 # ----------------------------------------------------------------------------------
 def q1_protein_to_contig(con, meta_path, ids, id_type):
-    """protein_id -> contig_id  (returns the anchor rows that were found)."""
+    """protein_id -> contig_id  (skipped entirely when --contigs is given)."""
     con.register("ids_rel", pd.DataFrame({"pid": ids}))
     sql = f"""
         SELECT DISTINCT m.protein_id AS protein_id, m.contig_id AS contig_id
@@ -148,12 +167,13 @@ def q1_protein_to_contig(con, meta_path, ids, id_type):
     return con.execute(sql, [meta_path]).df()
 
 
-def q2_contig_neighbourhoods(con, meta_path, contig_ids, contig_type):
+def q2_contig_neighbourhoods(con, meta_path, contig_ids, contig_type, has_contig_length):
     """contig_id -> every gene on the contig (the neighbourhood)."""
     con.register("contig_rel", pd.DataFrame({"cid": [str(c) for c in contig_ids]}))
+    length_col = "m.contig_length" if has_contig_length else "NULL AS contig_length"
     sql = f"""
         SELECT m.protein_id, m.contig_id, m.contig_name, m.cluster_rep,
-               m.start_position, m.end_position, m.strand
+               m.start_position, m.end_position, m.strand, {length_col}
         FROM read_parquet(?) m
         JOIN contig_rel c ON m.contig_id = CAST(c.cid AS {contig_type})
     """
@@ -177,10 +197,13 @@ def q3_pfam(con, pfam_path, protein_ids, pid_type):
 def classify_anchor(anchor, genes_sorted, targets, ctx, window_genes, window_bp, small_orf_aa):
     """genes_sorted: list of gene dicts on the contig, ascending by start, with 'rank'."""
     r = anchor["rank"]
-    contig_left = min(g["start"] for g in genes_sorted)
-    contig_right = max(g["end"] for g in genes_sorted)
-    left_span = anchor["start"] - contig_left
-    right_span = contig_right - anchor["end"]
+    clen = anchor.get("contig_length")
+    if clen and clen > 0:
+        left_span = anchor["start"] - 1
+        right_span = clen - anchor["end"]
+    else:                                    # no contig_length: fall back to called-gene span
+        left_span = anchor["start"] - min(g["start"] for g in genes_sorted)
+        right_span = max(g["end"] for g in genes_sorted) - anchor["end"]
 
     neighbours = [g for g in genes_sorted if g["rank"] != r]
 
@@ -259,12 +282,15 @@ def ascii_map(genes_sorted, anchor_ids, targets, ctx):
 # ----------------------------------------------------------------------------------
 # main
 # ----------------------------------------------------------------------------------
-def main():
+def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("ids", help="text file of family protein_ids (one per line)")
-    ap.add_argument("--metadata", required=True, help="mgy_proteins_metadata.parquet")
-    ap.add_argument("--pfam", required=True, help="mgy_proteins_pfam.parquet")
+    ap.add_argument("ids", nargs="?", help="text file of family protein_ids (one per line)")
+    ap.add_argument("--metadata", help="mgy_proteins_metadata.parquet")
+    ap.add_argument("--pfam", help="mgy_proteins_pfam.parquet")
+    ap.add_argument("--contigs", default=None,
+                    help="text file of contig_ids (one per line) already known to carry the "
+                         "family. Skips the protein_id -> contig_id lookup (query 1).")
     ap.add_argument("--targets", default="PF01183,PF25309",
                     help="decisive Pfam accessions (comma-sep). Default: GH25 endolysin.")
     ap.add_argument("--context-pfams", default="PF13472",
@@ -275,17 +301,36 @@ def main():
                     help="max length (aa) of a no-Pfam ORF to flag as holin/spanin candidate")
     ap.add_argument("--id-strip-prefix", default=None,
                     help="prefix to strip from ids (e.g. MGYP) if parquet stores bare numbers")
-    ap.add_argument("--out-prefix", default="synteny")
+    ap.add_argument("--outdir", default="output/synteny",
+                    help="output directory (created if missing); log.txt is written here")
+    ap.add_argument("--out-prefix", default="synteny", help="basename prefix for result files")
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--memory-limit", default=None)
-    args = ap.parse_args()
+    ap.add_argument("--self-test", action="store_true",
+                    help="run a synthetic end-to-end check and exit")
+    args = ap.parse_args(argv)
+    if not args.self_test and not (args.ids and args.metadata and args.pfam):
+        ap.error("ids, --metadata and --pfam are required (unless --self-test)")
+    return args
 
-    targets = {strip_pfam_version(t) for t in args.targets.split(",") if t.strip()}
-    ctx = {strip_pfam_version(t) for t in args.context_pfams.split(",") if t.strip()}
 
-    for p in (args.metadata, args.pfam, args.ids):
+def run(args):
+    targets = {pfam_key(t) for t in args.targets.split(",") if t.strip()}
+    ctx = {pfam_key(t) for t in args.context_pfams.split(",") if t.strip()}
+
+    inputs = [args.metadata, args.pfam, args.ids] + ([args.contigs] if args.contigs else [])
+    for p in inputs:
         if not os.path.exists(p):
             sys.exit(f"ERROR: file not found: {p}")
+
+    os.makedirs(args.outdir, exist_ok=True)
+    setup_logging(os.path.join(args.outdir, "log.txt"))
+    prefix = os.path.join(args.outdir, args.out_prefix)
+
+    LOG.info("START synteny census | targets=%s context=%s window=%dgenes/%dbp",
+             ",".join(sorted(targets)), ",".join(sorted(ctx)) or "-",
+             args.window_genes, args.window_bp)
+    LOG.info("outputs -> %s/", args.outdir)
 
     con = duckdb.connect()
     if args.threads:
@@ -303,99 +348,115 @@ def main():
                      f"Found: {list(meta_schema)}")
     pid_type_meta = meta_schema["protein_id"]
     contig_type = meta_schema["contig_id"]
+    has_contig_length = "contig_length" in meta_schema
     pfam_pid_col = find_col(pfam_schema, ["protein_id"])
-    pfam_acc_col = find_col(pfam_schema, ["pfam_id", "pfam_acc", "pfam", "pfam_accession", "accession"])
+    pfam_acc_col = find_col(pfam_schema, ["pfam_id", "pfam_acc", "pfam", "pfam_accession",
+                                          "accession"])
     pfam_name_col = find_col(pfam_schema, ["pfam_name", "name", "description", "pfam_desc"])
     if pfam_pid_col is None or pfam_acc_col is None:
-        sys.exit(f"ERROR: could not identify protein_id/pfam-accession columns in pfam parquet. "
+        sys.exit("ERROR: could not identify protein_id/pfam-accession columns in pfam parquet. "
                  f"Found: {list(pfam_schema)}")
     pid_type_pfam = pfam_schema[pfam_pid_col]
+    LOG.info("schemas OK | protein_id=%s contig_id=%s contig_length=%s pfam_acc=%s",
+             pid_type_meta, contig_type, "yes" if has_contig_length else "NO (gene-span edges)",
+             pfam_acc_col)
 
     # ---- input ids --------------------------------------------------------------
     ids = read_ids(args.ids, args.id_strip_prefix)
-    ids = sanitise_ids_for_type(ids, pid_type_meta)
+    ids = sanitise_ids_for_type(ids, pid_type_meta, "protein_id")
     if not ids:
         sys.exit("ERROR: no usable protein_ids in input.")
-    log(f"[1/3] {len(ids)} input protein_ids -> querying contigs ...")
 
-    # ---- QUERY 1 ----------------------------------------------------------------
-    anchors = q1_protein_to_contig(con, args.metadata, ids, pid_type_meta)
-    found = set(anchors["protein_id"].astype(str))
-    missing = [i for i in ids if i not in found]
-    if missing:
-        log(f"  ! {len(missing)} id(s) not found in metadata (e.g. {missing[:5]})")
-    if anchors.empty:
-        sys.exit("ERROR: none of the input ids were found in the metadata parquet.")
-    anchor_ids = set(anchors["protein_id"].astype(str))
-    contig_ids = sorted(anchors["contig_id"].astype(str).unique())
-    log(f"      {len(anchor_ids)} anchors on {len(contig_ids)} distinct contigs.")
+    # ---- STEP 1: protein_id -> contig_id (skipped when --contigs is given) -------
+    if args.contigs:
+        contig_ids = sanitise_ids_for_type(read_ids(args.contigs), contig_type, "contig_id")
+        if not contig_ids:
+            sys.exit("ERROR: no usable contig_ids in --contigs file.")
+        LOG.info("[1/3] SKIPPED protein_id->contig_id lookup: %d contig_ids supplied via "
+                 "--contigs (%d input protein_ids)", len(contig_ids), len(ids))
+    else:
+        LOG.info("[1/3] mapping %d input protein_ids -> contig_ids ...", len(ids))
+        anchors = q1_protein_to_contig(con, args.metadata, ids, pid_type_meta)
+        if anchors.empty:
+            sys.exit("ERROR: none of the input ids were found in the metadata parquet.")
+        found = set(anchors["protein_id"].astype(str))
+        missing = [i for i in ids if i not in found]
+        if missing:
+            LOG.warning("%d id(s) not found in metadata (e.g. %s)", len(missing), missing[:5])
+        contig_ids = sorted(anchors["contig_id"].astype(str).unique())
+        LOG.info("[1/3] done: %d protein_ids on %d distinct contigs", len(found), len(contig_ids))
 
-    # ---- QUERY 2 ----------------------------------------------------------------
-    log("[2/3] fetching all genes on those contigs ...")
-    neigh = q2_contig_neighbourhoods(con, args.metadata, contig_ids, contig_type)
-    log(f"      {len(neigh)} genes retrieved across {neigh['contig_id'].nunique()} contigs.")
+    # ---- STEP 2: neighbourhoods -------------------------------------------------
+    LOG.info("[2/3] fetching all genes on %d contigs ...", len(contig_ids))
+    neigh = q2_contig_neighbourhoods(con, args.metadata, contig_ids, contig_type,
+                                     has_contig_length)
+    neigh = neigh.drop_duplicates(subset=["contig_id", "protein_id"])
+    if neigh.empty:
+        sys.exit("ERROR: no genes found on the requested contigs.")
+    id_set = set(ids)
+    neigh["pid_str"] = neigh["protein_id"].astype(str)
+    anchor_ids = set(neigh.loc[neigh["pid_str"].isin(id_set), "pid_str"])
+    if not anchor_ids:
+        sys.exit("ERROR: none of the input protein_ids are present on the given contigs.")
+    LOG.info("[2/3] done: %d genes on %d contigs; %d anchors matched",
+             len(neigh), neigh["contig_id"].nunique(), len(anchor_ids))
+    if args.contigs:
+        absent = len(id_set) - len(anchor_ids)
+        if absent:
+            LOG.warning("%d input protein_id(s) are not on any supplied contig", absent)
 
-    # ---- QUERY 3 ----------------------------------------------------------------
-    log("[3/3] fetching Pfam annotations for neighbourhood genes ...")
-    all_pids = sorted(neigh["protein_id"].astype(str).unique())
+    # ---- STEP 3: Pfam annotations -----------------------------------------------
+    LOG.info("[3/3] fetching Pfam annotations for %d neighbourhood genes ...",
+             neigh["pid_str"].nunique())
+    all_pids = sorted(neigh["pid_str"].unique())
     pf = q3_pfam(con, args.pfam, all_pids, pid_type_pfam)
     pf_map = defaultdict(set)
     name_map = {}
     for _, row in pf.iterrows():
-        acc = strip_pfam_version(row[pfam_acc_col])
+        acc = pfam_key(row[pfam_acc_col])
         pf_map[str(row[pfam_pid_col])].add(acc)
         if pfam_name_col:
             name_map[acc] = row[pfam_name_col]
-    log(f"      {len(pf)} Pfam rows for {len(pf_map)} annotated genes.")
+    LOG.info("[3/3] done: %d Pfam rows for %d annotated genes", len(pf), len(pf_map))
 
     # ---- build neighbourhoods ---------------------------------------------------
+    LOG.info("building neighbourhoods and classifying anchors ...")
     neigh = neigh.copy()
     neigh["strand_i"] = neigh["strand"].map(strand_to_int)
     neigh["start"] = neigh["start_position"].astype("int64")
     neigh["end"] = neigh["end_position"].astype("int64")
-    neigh["pid_str"] = neigh["protein_id"].astype(str)
     neigh["pfams"] = neigh["pid_str"].map(lambda p: pf_map.get(p, set()))
 
-    per_anchor = []
-    maps = []
+    per_anchor, maps = [], []
     for cid, grp in neigh.groupby("contig_id"):
         grp = grp.sort_values("start").reset_index(drop=True)
+        clen = grp["contig_length"].iloc[0] if has_contig_length else None
+        clen = int(clen) if pd.notna(clen) else None
         genes = []
         for rank, (_, g) in enumerate(grp.iterrows()):
             genes.append({
                 "rank": rank, "protein_id": g["pid_str"], "contig_id": cid,
                 "contig_name": g.get("contig_name"), "cluster_rep": g["cluster_rep"],
-                "start": int(g["start"]), "end": int(g["end"]),
+                "start": int(g["start"]), "end": int(g["end"]), "contig_length": clen,
                 "strand_i": int(g["strand_i"]), "pfams": set(g["pfams"]),
             })
-        contig_anchor_ids = [x["protein_id"] for x in genes if x["protein_id"] in anchor_ids]
-        for a in genes:
-            if a["protein_id"] not in anchor_ids:
-                continue
-            res = classify_anchor(a, genes, targets, ctx,
-                                  args.window_genes, args.window_bp, args.small_orf_aa)
-            per_anchor.append(res)
-        if contig_anchor_ids:
+        contig_anchors = [x for x in genes if x["protein_id"] in anchor_ids]
+        for a in contig_anchors:
+            per_anchor.append(classify_anchor(a, genes, targets, ctx, args.window_genes,
+                                              args.window_bp, args.small_orf_aa))
+        if contig_anchors:
             maps.append((cid, ascii_map(genes, anchor_ids, targets, ctx)))
 
     adf = pd.DataFrame(per_anchor)
+    LOG.info("classified %d anchors on %d contigs", len(adf), adf["contig_id"].nunique())
 
     # ---- aggregate to per-contig (a contig is POSITIVE if any anchor is) --------
-    def contig_status(sub):
-        s = set(sub["status"])
-        if "POSITIVE" in s:
-            return "POSITIVE"
-        if "NEGATIVE" in s:
-            return "NEGATIVE"
-        if "NEGATIVE_PARTIAL" in s:
-            return "NEGATIVE_PARTIAL"
-        if "AMBIGUOUS_EDGE" in s:
-            return "AMBIGUOUS_EDGE"
-        return "ISOLATED"
+    order = ["POSITIVE", "NEGATIVE", "NEGATIVE_PARTIAL", "AMBIGUOUS_EDGE", "ISOLATED"]
 
     contig_rows = []
     for cid, sub in adf.groupby("contig_id"):
-        st = contig_status(sub)
+        s = set(sub["status"])
+        st = next(o for o in order if o in s)
         pos = sub[sub["status"] == "POSITIVE"]
         rep_row = pos.iloc[0] if not pos.empty else sub.iloc[0]
         contig_rows.append({
@@ -413,11 +474,7 @@ def main():
     n_input = len(ids)
     n_contigs = len(cdf)
     counts = cdf["status"].value_counts().to_dict()
-    n_pos = counts.get("POSITIVE", 0)
-    n_neg = counts.get("NEGATIVE", 0)
-    n_negp = counts.get("NEGATIVE_PARTIAL", 0)
-    n_amb = counts.get("AMBIGUOUS_EDGE", 0)
-    n_iso = counts.get("ISOLATED", 0)
+    n_pos, n_neg, n_negp, n_amb, n_iso = (counts.get(o, 0) for o in order)
 
     assess_strict = n_pos + n_neg
     assess_lenient = n_pos + n_neg + n_negp
@@ -430,39 +487,42 @@ def main():
     same_strand_pos = (pos_contigs["target_same_strand"] == True).sum()  # noqa: E712
 
     # ---- write outputs ----------------------------------------------------------
-    adf.to_csv(f"{args.out_prefix}_anchors.tsv", sep="\t", index=False)
-    cdf.to_csv(f"{args.out_prefix}_contigs.tsv", sep="\t", index=False)
-    with open(f"{args.out_prefix}_maps.txt", "w") as fh:
+    adf.to_csv(f"{prefix}_anchors.tsv", sep="\t", index=False)
+    cdf.to_csv(f"{prefix}_contigs.tsv", sep="\t", index=False)
+    with open(f"{prefix}_maps.txt", "w") as fh:
         for cid, m in maps:
             st = cdf.loc[cdf["contig_id"] == cid, "status"].iloc[0]
             fh.write(f"# contig {cid}  [{st}]\n{m}\n\n")
+    LOG.info("wrote %s_anchors.tsv, %s_contigs.tsv, %s_maps.txt", prefix, prefix, prefix)
 
     # ---- verdict ----------------------------------------------------------------
     def pct(x):
         return "n/a" if x != x else f"{x*100:.0f}%"
 
-    print("\n" + "=" * 72)
-    print("SYNTENY CENSUS VERDICT  (target Pfams: " + ", ".join(sorted(targets)) + ")")
-    print("=" * 72)
-    print(f"input protein_ids ............ {n_input}")
-    print(f"mapped to a contig ........... {len(anchor_ids)}")
-    print(f"distinct contigs ............. {n_contigs}")
-    print("-" * 72)
-    print(f"POSITIVE  (target adjacent) .......... {n_pos}")
-    print(f"NEGATIVE  (confident, full window) ... {n_neg}")
-    print(f"NEGATIVE  (edge-ambiguous) ........... {n_negp}")
-    print(f"AMBIGUOUS (both sides truncated) ..... {n_amb}")
-    print(f"ISOLATED  (lone gene on fragment) .... {n_iso}")
-    print("-" * 72)
-    print(f"strict  positive fraction  = {n_pos}/{assess_strict} = {pct(frac_strict)}"
-          f"   (confident calls only)")
-    print(f"lenient positive fraction  = {n_pos}/{assess_lenient} = {pct(frac_lenient)}"
-          f"   (edge-ambiguous counted as negatives)")
-    print(f"independent positives (distinct cluster_rep) = {indep_pos}"
-          f"   of {indep_assess} independent assessable")
+    lines = [
+        "=" * 72,
+        "SYNTENY CENSUS VERDICT  (target Pfams: " + ", ".join(sorted(targets)) + ")",
+        "=" * 72,
+        f"input protein_ids ............ {n_input}",
+        f"mapped to a contig ........... {len(anchor_ids)}",
+        f"distinct contigs ............. {n_contigs}",
+        "-" * 72,
+        f"POSITIVE  (target adjacent) .......... {n_pos}",
+        f"NEGATIVE  (confident, full window) ... {n_neg}",
+        f"NEGATIVE  (edge-ambiguous) ........... {n_negp}",
+        f"AMBIGUOUS (both sides truncated) ..... {n_amb}",
+        f"ISOLATED  (lone gene on fragment) .... {n_iso}",
+        "-" * 72,
+        f"strict  positive fraction  = {n_pos}/{assess_strict} = {pct(frac_strict)}"
+        "   (confident calls only)",
+        f"lenient positive fraction  = {n_pos}/{assess_lenient} = {pct(frac_lenient)}"
+        "   (edge-ambiguous counted as negatives)",
+        f"independent positives (distinct cluster_rep) = {indep_pos}"
+        f"   of {indep_assess} independent assessable",
+    ]
     if n_pos:
-        print(f"co-directional with anchor (same strand)     = {same_strand_pos}/{n_pos}")
-    print("-" * 72)
+        lines.append(f"co-directional with anchor (same strand)     = {same_strand_pos}/{n_pos}")
+    lines.append("-" * 72)
 
     # heuristic call -- raw numbers above are what matter; this is a summary aid.
     if assess_strict == 0:
@@ -478,13 +538,81 @@ def main():
                 "-- not enough to claim conserved synteny.")
     else:
         call = "NEGATIVE: no target adjacency among assessable contigs."
-    print("VERDICT:", call)
+    lines.append("VERDICT: " + call)
     if indep_pos < n_pos:
-        print("  note: some positives share a cluster_rep (near-identical) -- cite the "
-              "independent count, not the raw positive count.")
-    print("=" * 72)
-    print(f"\nWrote: {args.out_prefix}_anchors.tsv, {args.out_prefix}_contigs.tsv, "
-          f"{args.out_prefix}_maps.txt")
+        lines.append("  note: some positives share a cluster_rep (near-identical) -- cite the "
+                     "independent count, not the raw positive count.")
+    lines.append("=" * 72)
+
+    report = "\n".join(lines)
+    print("\n" + report)
+    with open(f"{prefix}_verdict.txt", "w") as fh:
+        fh.write(report + "\n")
+    LOG.info("DONE | POSITIVE=%d NEGATIVE=%d NEGATIVE_PARTIAL=%d AMBIGUOUS_EDGE=%d ISOLATED=%d",
+             n_pos, n_neg, n_negp, n_amb, n_iso)
+    return cdf
+
+
+# ----------------------------------------------------------------------------------
+# self-test: the real test parquets have one gene per contig, so they cannot exercise
+# POSITIVE / NEGATIVE. Build a synthetic store that does.
+# ----------------------------------------------------------------------------------
+def self_test():
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # contig 1: anchor 100 next to target gene 101 (PF01183)      -> POSITIVE
+        # contig 2: anchor 200, neighbours but no target, long contig  -> NEGATIVE
+        # contig 3: anchor 300 alone on the contig                     -> ISOLATED
+        meta = pd.DataFrame([
+            (1, 100, 1_000, 1_500, 1, 100, 50_000),
+            (1, 101, 2_000, 2_600, 1, 101, 50_000),
+            (2, 200, 20_000, 20_900, -1, 200, 50_000),
+            (2, 201, 30_500, 31_000, 1, 201, 50_000),
+            (3, 300, 500, 900, 1, 300, 1_200),
+        ], columns=["contig_id", "protein_id", "start_position", "end_position",
+                    "strand", "cluster_rep", "contig_length"])
+        meta["contig_name"] = "contig_" + meta["contig_id"].astype(str)
+        pfam = pd.DataFrame([(101, 1183), (201, 9999)],
+                            columns=["protein_id", "pfam_accession"])
+
+        meta_p = os.path.join(tmp, "meta.parquet")
+        pfam_p = os.path.join(tmp, "pfam.parquet")
+        ids_p = os.path.join(tmp, "ids.txt")
+        contigs_p = os.path.join(tmp, "contigs.txt")
+        meta.to_parquet(meta_p)
+        pfam.to_parquet(pfam_p)
+        with open(ids_p, "w") as fh:
+            fh.write("MGYP100\nMGYP200\nMGYP300\n")     # exercises --id-strip-prefix
+        with open(contigs_p, "w") as fh:
+            fh.write("1\n2\n3\n")
+
+        base = ["--metadata", meta_p, "--pfam", pfam_p, "--targets", "PF01183",
+                "--id-strip-prefix", "MGYP", "--window-bp", "10000",
+                "--outdir", os.path.join(tmp, "out")]
+
+        cdf = run(parse_args([ids_p] + base))
+        got = dict(cdf.set_index("contig_id")["status"])
+        assert got == {1: "POSITIVE", 2: "NEGATIVE", 3: "ISOLATED"}, got
+        assert cdf.loc[cdf.contig_id == 1, "target_pfam"].iloc[0] == "PF01183"
+
+        # --contigs must skip query 1 and give an identical answer
+        cdf2 = run(parse_args([ids_p] + base + ["--contigs", contigs_p]))
+        assert dict(cdf2.set_index("contig_id")["status"]) == got
+
+        # integer pfam accession 1183 must match the 'PF01183' target string
+        assert pfam_key(1183) == pfam_key("PF01183.7") == "PF01183"
+
+    print("\nself-test OK: POSITIVE/NEGATIVE/ISOLATED, --contigs skip, pfam id normalisation")
+
+
+def main():
+    args = parse_args()
+    if args.self_test:
+        logging.basicConfig(level=logging.INFO)
+        self_test()
+        return
+    run(args)
 
 
 if __name__ == "__main__":
