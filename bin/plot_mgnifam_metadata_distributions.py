@@ -2,19 +2,23 @@
 # Family-level distribution figures for the MGnifams catalogue.
 # Every panel is a stacked barplot of annotated vs unannotated (novel) families.
 #
+# Built to the scientific-publication-plotter standard: plotnine only, vector PDF output,
+# one Times text size for every text element, no plot titles (context belongs in the
+# manuscript caption), Wong colorblind-safe palette for the two discrete categories.
+#
 # Modes (--mode, default all):
 #   figure        -> <out>/figures/            main-text Figure X
 #                    A: family size, log10 bins, full range
-#                    B: representative sequence length, 100-aa bins, full range
+#                    B: representative sequence length, 100-aa bins, full range (75-2,000)
 #                    C: mean pLDDT, 5-unit bins
-#                    saved as the three standalone panels plus the combined
-#                    figure_X_family_metadata.{png,pdf} at 600 dpi
+#                    each panel as its own PDF, plus the combined, tagged A/B/C
+#                    figure_X_family_metadata.pdf
 #   supplementary -> <out>/supplementary_figures/
 #                    size split small/medium/large, length split short/medium/long
 #                    (the fine-grained view behind panels A and B), and pTM
 #
-# Size uses log10 bins in the main figure because its range (29-1,515,677) cannot be
-# binned legibly on a linear axis; the linear small/medium/large split is supplementary.
+# Size uses log10 bins in the main figure because its range (29-1,515,677) cannot be binned
+# legibly on a linear axis; the linear small/medium/large split is supplementary.
 #
 # Also writes <out>/mgnifam_metadata_stats.txt: min/Q1/median/Q3/max per metric, overall
 # and split by annotated vs novel -- the numbers quoted in the manuscript paragraph.
@@ -34,19 +38,83 @@
 #   --size-small-bin 20 --size-medium-bin 200 --size-large-bin 1000
 
 import argparse
+import functools
+import operator
 import os
+import warnings
 
 import numpy as np
+import pandas as pd
 import polars as pl
 import matplotlib
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
+matplotlib.use("Agg")  # headless: never open a GUI canvas while composing panels
+import matplotlib.font_manager as fm
+from plotnine import (aes, element_blank, element_line, element_rect, element_text, geom_col,
+                      geom_text, ggplot, labs, scale_fill_manual, scale_y_continuous, theme,
+                      theme_minimal)
 
-ANNOTATED_COLOR = "#faad39"
-NOVEL_COLOR = "#747b87"
-FIGURE_DPI = 600
+# ----------------------------------------------------------------------------------------
+# PARAMETER BLOCK -- every tunable that controls how the figures look lives here.
+# ----------------------------------------------------------------------------------------
+TEXT_SIZE_PT = 8            # one size for EVERY text element: axes, ticks, legend, labels, tags
+FONT_STACK = ("Times New Roman", "Nimbus Roman", "Liberation Serif", "DejaVu Serif")
+
+WIDTH_MM = 180              # double column: ~20 binned categories + in-bar counts need the width
+PANEL_HEIGHT_MM = 55        # per panel; the combined figure is n_panels x this
+PREVIEW_DPI = 300           # raster preview only; the PDF is the deliverable
+BAR_WIDTH = 0.75            # fraction of the category slot
+LINE_WIDTH_MM = 0.2         # grid lines / bar outlines: thinner than the data
+LABEL_PAD_FRAC = 0.02       # gap between a bar top and its percentage label, as a fraction of y-max
+HEADROOM_FRAC = 0.18        # y-axis headroom above the tallest bar, so labels are not clipped
+
+# Discrete color -- Bang Wong colorblind-safe palette, used in its fixed order.
+WONG = ["#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#D55E00", "#F0E442", "#0072B2", "#000000"]
+ANNOTATED, NOVEL = "Annotated", "Unannotated (novel)"
+FILL_COLORS = {ANNOTATED: WONG[0], NOVEL: WONG[1]}  # Wong 1, Wong 2
+LABEL_COLOR = "#000000"     # both Wong fills are light enough to carry black text
+LEGEND_KEY_PT = 10          # legend glyphs only; legend text stays at TEXT_SIZE_PT
+
+# Continuous color -- viridis family with equal-count (quantile) breaks through the full ramp.
+# No panel here encodes a continuous magnitude by color (the fill is the categorical annotation
+# status above), so these are declared and unused.
+CONTINUOUS_CMAP = "viridis"
+
+# A bar shorter than this fraction of the tallest bar cannot hold a horizontal percentage label
+# without colliding with its neighbours, so that label is rotated upright instead of dropped --
+# every bin reports its novel share, however few families it holds.
+SMALL_BAR_FRAC = 0.025
+# A stacked segment thinner than this cannot fit its count inside the bar at TEXT_SIZE_PT.
+COUNT_LABEL_MIN_FRAC = 0.06
+# ----------------------------------------------------------------------------------------
+
+
+def resolve_font():
+    """First available family in FONT_STACK, refreshing matplotlib's cache before giving up."""
+    available = {f.name for f in fm.fontManager.ttflist}
+    if not available & set(FONT_STACK):
+        fm.fontManager = fm._load_fontmanager(try_read_cache=False)
+        available = {f.name for f in fm.fontManager.ttflist}
+
+    for family in FONT_STACK:
+        if family in available:
+            if family != FONT_STACK[0]:
+                print(f"Note: '{FONT_STACK[0]}' unavailable, using metric-compatible '{family}'.")
+            return family
+
+    raise RuntimeError(f"None of the serif fonts {FONT_STACK} are installed.")
+
+
+FONT_FAMILY = resolve_font()
+
+# the log10 axis labels are mathtext ($10^{1}$); without this they would render in matplotlib's
+# default DejaVu Sans and embed a second family in the PDF
+matplotlib.rcParams.update({
+    "mathtext.fontset": "custom",
+    "mathtext.rm": FONT_FAMILY,
+    "mathtext.it": f"{FONT_FAMILY}:italic",
+    "mathtext.bf": f"{FONT_FAMILY}:bold",
+})
 
 
 def load_metadata(csv_path, novel_ids_path):
@@ -102,134 +170,135 @@ def write_stats(df, output_path):
     print(f"\nSaved: {output_path}")
 
 
-def bin_counts(df, value_col, bin_size, lower_bound=None, upper_bound=None, log=False):
-    """Bin one column and count annotated / novel families per bin.
+def bin_counts(df, value_col, bin_size, log=False, right_closed=False,
+               lower_bound=None, upper_bound=None):
+    """Bin one column, count annotated / novel families per bin, return a tidy pandas frame.
 
-    log=True bins by decade (10^e <= v < 10^(e+1)) instead of by a fixed width, so a
-    range spanning five orders of magnitude fits on one legible linear axis.
+    log=True bins by decade (10^e <= v < 10^(e+1)) instead of by a fixed width, so a range
+    spanning five orders of magnitude fits on one legible linear axis.
 
-    lower_bound/upper_bound clip the printed interval labels to the range the subset
-    really covers, so the first bin of the full-range length panel reads "75-99", not "1-99".
+    right_closed=True bins integers as (start, start+bin_size] instead of [start, start+bin_size),
+    so a column whose maximum is a round number closes exactly on it -- length runs to
+    "1,901-2,000", not into a phantom "2,000-2,099" bin.
+
+    lower_bound / upper_bound clip the printed interval labels to the range the subset really
+    covers, so the first length bin reads "75-100" rather than "1-100". They default to the
+    subset's own min / max.
     """
-    if lower_bound is None:
-        lower_bound = df[value_col].min() - 1
+    values = df[value_col].drop_nulls()
+    if values.is_empty():
+        return pd.DataFrame()
+
+    lo = values.min() if lower_bound is None else lower_bound
+    hi = values.max() if upper_bound is None else upper_bound
 
     if log:
         df = df.filter(pl.col(value_col) > 0).with_columns(
-            pl.col(value_col).log10().floor().cast(pl.Int64).alias("bin_start"))
-    else:
-        df = df.with_columns(((pl.col(value_col) // bin_size) * bin_size).alias("bin_start"))
-
-    agg = df.group_by(["bin_start", "annotated"]).agg(pl.len().alias("count"))
-    bins = sorted(agg["bin_start"].unique().to_list())
-
-    if log:
-        labels = [f"$10^{{{b}}}$-$10^{{{b + 1}}}$" for b in bins]
+            pl.col(value_col).log10().floor().cast(pl.Int64).alias("start"))
+        label_of = lambda s: f"$10^{{{s}}}$-$10^{{{s + 1}}}$"  # noqa: E731
+    elif right_closed:
+        df = df.with_columns((((pl.col(value_col) - 1) // bin_size) * bin_size + 1).alias("start"))
+        label_of = lambda s: f"{max(s, lo):,}-{min(s + bin_size - 1, hi):,}"  # noqa: E731
     elif df.schema[value_col] in (pl.Float32, pl.Float64):
-        # continuous values: label the bin edges, e.g. "65-70"
-        labels = [f"{b:g}-{b + bin_size:g}" for b in bins]
+        df = df.with_columns(((pl.col(value_col) // bin_size) * bin_size).alias("start"))
+        label_of = lambda s: f"{s:g}-{s + bin_size:g}"  # noqa: E731
     else:
-        # integer counts: label the closed interval the bin really holds, clipped to the
-        # group's own range so boundary values never produce a phantom trailing bin
-        hi = (lambda b: b + bin_size - 1) if upper_bound is None else \
-             (lambda b: min(b + bin_size - 1, upper_bound))
-        labels = [f"{max(b, lower_bound + 1):,}-{hi(b):,}" for b in bins]
+        df = df.with_columns(((pl.col(value_col) // bin_size) * bin_size).alias("start"))
+        label_of = lambda s: f"{max(s, lo):,}-{min(s + bin_size - 1, hi):,}"  # noqa: E731
 
-    annotated, novel = [], []
-    for b in bins:
-        sub = agg.filter(pl.col("bin_start") == b)
-        annotated.append(sub.filter(pl.col("annotated"))["count"].sum())
-        novel.append(sub.filter(~pl.col("annotated"))["count"].sum())
+    agg = df.group_by(["start", "annotated"]).agg(pl.len().alias("count"))
+    starts = sorted(agg["start"].unique().to_list())
 
-    return labels, annotated, novel
+    rows = []
+    for start in starts:
+        sub = agg.filter(pl.col("start") == start)
+        counts = {ANNOTATED: sub.filter(pl.col("annotated"))["count"].sum(),
+                  NOVEL: sub.filter(~pl.col("annotated"))["count"].sum()}
+        total = counts[ANNOTATED] + counts[NOVEL]
+        # stack annotated at the bottom: its label sits at half its own height, the novel
+        # label above it at half of its own
+        rows.append(dict(bin=label_of(start), status=ANNOTATED, count=counts[ANNOTATED],
+                         mid=counts[ANNOTATED] / 2, total=total))
+        rows.append(dict(bin=label_of(start), status=NOVEL, count=counts[NOVEL],
+                         mid=counts[ANNOTATED] + counts[NOVEL] / 2, total=total,
+                         pct=100 * counts[NOVEL] / total if total else 0))
 
-
-def draw_panel(ax, labels, annotated, novel, x_label, title, legend=True):
-    totals = [a + u for a, u in zip(annotated, novel)]
-    x = np.arange(len(labels))
-
-    ax.bar(x, annotated, 0.6, label="Annotated", color=ANNOTATED_COLOR)
-    ax.bar(x, novel, 0.6, bottom=annotated, label="Unannotated (novel)", color=NOVEL_COLOR)
-
-    # a segment thinner than this cannot hold its own count label without overlapping its
-    # neighbour; a bar this thin is also too small to read a percentage off, and a bin holding
-    # a handful of families would otherwise shout a meaningless "100.0% novel"
-    min_labelled = 0.025 * max(totals)
-    for i, (ann, unann, total) in enumerate(zip(annotated, novel, totals)):
-        if ann >= min_labelled:
-            ax.text(x[i], ann / 2, f"{ann:,}", ha="center", va="center",
-                    fontsize=8, color="black", fontweight="bold")
-        if unann >= min_labelled:
-            ax.text(x[i], ann + unann / 2, f"{unann:,}", ha="center", va="center",
-                    fontsize=8, color="white", fontweight="bold")
-        if total >= min_labelled:
-            ax.text(x[i], total + 0.05, f"{100 * unann / total:.1f}%",
-                    ha="center", va="bottom", fontsize=8, color="black")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
-    ax.set_xlabel(x_label, fontsize=11)
-    ax.set_ylabel("Number of families", fontsize=11)
-    if title:
-        ax.set_title(title, fontsize=12)
-    ax.set_ylim(0, max(totals) * 1.12)
-    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-    if legend:
-        ax.legend(fontsize=9)
-    ax.margins(x=0.02)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    tidy = pd.DataFrame(rows)
+    tidy["bin"] = pd.Categorical(tidy["bin"], categories=[label_of(s) for s in starts], ordered=True)
+    # ggplot stacks the reverse of the level order, so NOVEL first puts ANNOTATED at the bottom
+    tidy["status"] = pd.Categorical(tidy["status"], categories=[NOVEL, ANNOTATED], ordered=True)
+    return tidy
 
 
-def save_panel(df, output_path, value_col, bin_size, x_label, title,
-               lower_bound=0, upper_bound=None, log=False):
-    if df.is_empty():
-        print(f"No families in range for: {title} - skipping.")
-        return None
+def build_panel(tidy, x_label, tag=None, legend=True):
+    """One stacked barplot. No title -- context goes in the manuscript caption."""
+    y_max = tidy["total"].max()
 
-    binned = bin_counts(df, value_col, bin_size, lower_bound, upper_bound, log)
-    labels = binned[0]
+    # counts inside a segment only where the segment is thick enough to hold them
+    in_bar = tidy[tidy["count"] >= COUNT_LABEL_MIN_FRAC * y_max].copy()
+    in_bar["label"] = in_bar["count"].map("{:,}".format)
 
-    fig, ax = plt.subplots(figsize=(max(10, len(labels) * 0.7), 6))
-    draw_panel(ax, *binned, x_label, f"{title}\n(% above each bar = share of unannotated families)")
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=FIGURE_DPI)
-    plt.close(fig)
-    print(f"Saved: {output_path}")
-    return binned
+    # every bar gets its novel share, however short -- upright on bars too narrow for a
+    # horizontal label, so nothing collides and no bin goes unlabelled
+    tops = tidy[tidy["status"] == NOVEL].copy()
+    tops["label"] = tops["pct"].map("{:.1f}%".format)
+    tops["y"] = tops["total"] + LABEL_PAD_FRAC * y_max
+    wide = tops[tops["total"] >= SMALL_BAR_FRAC * y_max]
+    narrow = tops[tops["total"] < SMALL_BAR_FRAC * y_max]
+
+    return (ggplot()
+            + geom_col(tidy, aes("bin", "count", fill="status"), width=BAR_WIDTH)
+            + geom_text(in_bar, aes("bin", "mid", label="label"),
+                        size=TEXT_SIZE_PT, color=LABEL_COLOR)
+            + geom_text(wide, aes("bin", "y", label="label"),
+                        size=TEXT_SIZE_PT, color=LABEL_COLOR, va="bottom")
+            + geom_text(narrow, aes("bin", "y", label="label"), size=TEXT_SIZE_PT,
+                        color=LABEL_COLOR, va="bottom", ha="center", angle=90)
+            + scale_fill_manual(values=FILL_COLORS, breaks=[ANNOTATED, NOVEL])
+            + scale_y_continuous(expand=(0, 0, HEADROOM_FRAC, 0),
+                                 labels=lambda breaks: [f"{b:,.0f}" for b in breaks])
+            + labs(x=x_label, y="Number of families", tag=tag)
+            + theme_minimal()
+            + theme(
+                text=element_text(family=FONT_FAMILY, size=TEXT_SIZE_PT),
+                axis_text_x=element_text(rotation=45, ha="right"),
+                plot_title=element_blank(),
+                plot_tag=element_text(family=FONT_FAMILY, size=TEXT_SIZE_PT, weight="bold"),
+                plot_background=element_rect(fill="none", color="none"),
+                panel_background=element_rect(fill="white", color="none"),
+                panel_grid_minor=element_blank(),
+                panel_grid_major_x=element_blank(),
+                panel_grid_major_y=element_line(size=LINE_WIDTH_MM, color="#DDDDDD"),
+                legend_position="top" if legend else "none",
+                legend_title=element_blank(),
+                legend_key_size=LEGEND_KEY_PT,
+            ))
 
 
-def figure_panels(df, plddt_bin):
-    """The three main-text panels: (binning args, x label, standalone title)."""
+def save_figure(make_plot, path_no_ext, height_mm):
+    """Vector PDF (the deliverable) plus a raster preview for quick eyeballing.
+
+    Takes a factory, not a plot: drawing a composition consumes its layout registry, so a
+    second save of the same object raises. Each format gets a freshly built figure.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for ext, kwargs in (("pdf", {}), ("png", {"dpi": PREVIEW_DPI})):
+            make_plot().save(f"{path_no_ext}.{ext}", width=WIDTH_MM, height=height_mm,
+                             units="mm", verbose=False, **kwargs)
+    print(f"Saved: {path_no_ext}.pdf (+ .png preview)")
+
+
+def figure_panels(plddt_bin):
+    """The three main-text panels: (binning args, x axis label)."""
     return [
         (dict(value_col="size", bin_size=None, log=True),
-         "Family size (sequences in full alignment)",
-         "Family size distribution (log$_{10}$ bins)"),
-        (dict(value_col="length", bin_size=100),
-         "Representative sequence length (aa)",
-         "Representative sequence length distribution (100-aa bins)"),
+         "Family size (sequences in full alignment)"),
+        (dict(value_col="length", bin_size=100, right_closed=True),
+         "Representative sequence length (aa)"),
         (dict(value_col="plddt", bin_size=plddt_bin),
-         "Mean pLDDT of representative structure",
-         f"Structural confidence distribution (pLDDT, {plddt_bin:g}-unit bins)"),
+         "Mean pLDDT of representative structure"),
     ]
-
-
-def build_figure(df, panels, output_prefix):
-    """Combined publication figure: the panels stacked vertically, lettered A/B/C."""
-    fig, axes = plt.subplots(len(panels), 1, figsize=(11, 5 * len(panels)))
-
-    for ax, letter, (bin_args, x_label, _) in zip(axes, "ABCDEFG", panels):
-        labels, annotated, novel = bin_counts(df, **bin_args)
-        draw_panel(ax, labels, annotated, novel, x_label, title=None, legend=letter == "A")
-        ax.text(-0.06, 1.02, letter, transform=ax.transAxes,
-                fontsize=16, fontweight="bold", va="bottom", ha="right")
-
-    fig.tight_layout(h_pad=3)
-    for ext in ("png", "pdf"):
-        path = f"{output_prefix}.{ext}"
-        fig.savefig(path, dpi=FIGURE_DPI)
-        print(f"Saved: {path}")
-    plt.close(fig)
 
 
 def split_panels(df, col, x_label, name, small_max, medium_max, bins, labels):
@@ -241,15 +310,16 @@ def split_panels(df, col, x_label, name, small_max, medium_max, bins, labels):
     small_bin, medium_bin, large_bin = bins
     lo, mid, hi = labels
     return [
-        (df.filter(pl.col(col) < small_max), col, small_bin, x_label,
-         f"Family {name} distribution - {lo} (< {small_max:,}, binned by {small_bin:,})",
-         f"{name}_{lo}.png", None, small_max - 1),
-        (df.filter((pl.col(col) >= small_max) & (pl.col(col) < medium_max)), col, medium_bin, x_label,
-         f"Family {name} distribution - {mid} ({small_max:,}-{medium_max - 1:,}, binned by {medium_bin:,})",
-         f"{name}_{mid}.png", small_max - 1, medium_max - 1),
-        (df.filter(pl.col(col) >= medium_max), col, large_bin, x_label,
-         f"Family {name} distribution - {hi} (>= {medium_max:,}, binned by {large_bin:,})",
-         f"{name}_{hi}.png", medium_max - 1, None),
+        (df.filter(pl.col(col) < small_max), dict(value_col=col, bin_size=small_bin,
+                                                  upper_bound=small_max - 1),
+         x_label, f"{name}_{lo}"),
+        (df.filter((pl.col(col) >= small_max) & (pl.col(col) < medium_max)),
+         dict(value_col=col, bin_size=medium_bin, lower_bound=small_max,
+              upper_bound=medium_max - 1),
+         x_label, f"{name}_{mid}"),
+        (df.filter(pl.col(col) >= medium_max), dict(value_col=col, bin_size=large_bin,
+                                                    lower_bound=medium_max),
+         x_label, f"{name}_{hi}"),
     ]
 
 
@@ -258,7 +328,7 @@ def main():
         description="Stacked barplots (annotated vs unannotated) of MGnifam family size, "
                     "representative length, pLDDT and pTM, plus a manuscript stats report.")
     parser.add_argument("--metadata", required=True,
-                        help="mgnifam metadata CSV (id,full_size,rep_length,...,plddt,ptm)")
+                        help="mgnifam table CSV (id,full_size,rep_length,...,plddt,ptm)")
     parser.add_argument("--novel-ids", required=True,
                         help="TXT of unannotated (novel) family ids, one per line")
     parser.add_argument("--output-dir", default="output",
@@ -292,11 +362,23 @@ def main():
     write_stats(df, os.path.join(args.output_dir, "mgnifam_metadata_stats.txt"))
 
     if args.mode in ("all", "figure"):
-        panels = figure_panels(df, args.plddt_bin)
-        for letter, (bin_args, x_label, title) in zip("abc", panels):
-            save_panel(df, os.path.join(fig_dir, f"figure_X{letter}_{bin_args['value_col']}.png"),
-                       x_label=x_label, title=title, **bin_args)
-        build_figure(df, panels, os.path.join(fig_dir, "figure_X_family_metadata"))
+        specs = list(zip("ABC", figure_panels(args.plddt_bin)))
+        tidy_by_tag = {tag: bin_counts(df, **bin_args) for tag, (bin_args, _) in specs}
+
+        for tag, (bin_args, x_label) in specs:
+            save_figure(functools.partial(build_panel, tidy_by_tag[tag], x_label),
+                        os.path.join(fig_dir, f"figure_X{tag.lower()}_{bin_args['value_col']}"),
+                        PANEL_HEIGHT_MM)
+
+        # `/` stacks panels vertically; the legend is identical on all three, so the combined
+        # figure carries it once, on A
+        def combined():
+            return functools.reduce(operator.truediv, [
+                build_panel(tidy_by_tag[tag], x_label, tag=tag, legend=tag == "A")
+                for tag, (_, x_label) in specs])
+
+        save_figure(combined, os.path.join(fig_dir, "figure_X_family_metadata"),
+                    len(specs) * PANEL_HEIGHT_MM)
 
     if args.mode in ("all", "supplementary"):
         panels = split_panels(
@@ -309,13 +391,16 @@ def main():
             args.length_short_max, args.length_medium_max,
             (args.length_short_bin, args.length_medium_bin, args.length_long_bin),
             ("short", "medium", "long"))
-        panels.append((df, "ptm", args.ptm_bin, "pTM of representative structure",
-                       f"Structural confidence distribution (pTM, binned by {args.ptm_bin:g})",
-                       "ptm.png", 0, None))
+        panels.append((df, dict(value_col="ptm", bin_size=args.ptm_bin),
+                       "pTM of representative structure", "ptm"))
 
-        for subset, col, bin_size, x_label, title, name, lower, upper in panels:
-            save_panel(subset, os.path.join(supp_dir, name), col, bin_size, x_label, title,
-                       lower_bound=lower, upper_bound=upper)
+        for subset, bin_args, x_label, name in panels:
+            tidy = bin_counts(subset, **bin_args)
+            if tidy.empty:
+                print(f"No families in range for: {name} - skipping.")
+                continue
+            save_figure(functools.partial(build_panel, tidy, x_label),
+                        os.path.join(supp_dir, name), PANEL_HEIGHT_MM)
 
 
 if __name__ == "__main__":
