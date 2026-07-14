@@ -176,26 +176,35 @@ Trims off any start/end parts of seed MSA sequences that belong to the envelope 
 Family-level distribution figures for the catalogue (paper Figure X). Every panel is a stacked
 barplot of annotated vs unannotated (novel) families, where novel ids are read from
 `mgnifams_no_annotation_ids.txt`; the percentage above each bar is the share of unannotated
-families in that bin.
+families in that bin — printed on **every** bin, rotated upright where the bar is too short to
+carry it horizontally.
+
+Written to the repo's `scientific-plotting-skill` standard: **plotnine** only, vector **PDF**
+output (with a 300-dpi PNG preview alongside), one **Times** text size for every text element
+(`TEXT_SIZE_PT`), no plot titles — context belongs in the manuscript caption — and the
+colorblind-safe **Wong** palette (orange = annotated, sky blue = novel). Everything tunable about
+how the figures look sits in a single parameter block at the top of the script.
 
 Output is split by where the plot is meant to end up (`--mode`, default `all`):
 
 **`figure` → `<output-dir>/figures/`** — the main-text Figure X, one panel per claim in the
 manuscript paragraph:
-- **A** `figure_Xa_size.png` — family size, log₁₀ bins, full range
-- **B** `figure_Xb_length.png` — representative sequence length (== HMM match states), 100-aa bins, full range
-- **C** `figure_Xc_plddt.png` — mean pLDDT of the representative structure, 5-unit bins
-- `figure_X_family_metadata.png` / `.pdf` — the three panels combined and lettered A/B/C, 600 dpi
+- **A** `figure_Xa_size.pdf` — family size, log₁₀ bins, full range
+- **B** `figure_Xb_length.pdf` — representative sequence length, 100-aa bins, full range (75–2,000 aa)
+- **C** `figure_Xc_plddt.pdf` — mean pLDDT of the representative structure, 5-unit bins
+- `figure_X_family_metadata.pdf` — the three panels stacked and tagged A/B/C, 180 mm wide
 
 Size uses log₁₀ bins here because its range (29–1,515,677) cannot be binned legibly on a linear
 axis; a single panel is what lets the reader see the full span *and* the annotated/novel shift.
-Length needs no such trick — 75–2,000 aa fits one panel at 100-aa bins.
+Length needs no such trick — 75–2,000 aa fits one panel at 100-aa bins. Length bins are
+right-closed (`1,901–2,000`, not `2,000–2,099`) so the axis closes exactly on the longest
+representative sequence.
 
 **`supplementary` → `<output-dir>/supplementary_figures/`** — the fine-grained view behind panels
 A and B, plus the companion structural metric:
-- `size_{small,medium,large}.png` — linear bins, half-open cuts so each cut lands on a bin edge
-- `length_{short,medium,long}.png` — same
-- `ptm.png` — pTM of the representative structure
+- `size_{small,medium,large}.pdf` — linear bins, half-open cuts so each cut lands on a bin edge
+- `length_{short,medium,long}.pdf` — same
+- `ptm.pdf` — pTM of the representative structure
 
 Also writes `<output-dir>/mgnifam_metadata_stats.txt` with min/Q1/median/Q3/max/mean per metric,
 reported overall and split by annotated vs novel — the numbers quoted in the manuscript.
@@ -203,6 +212,10 @@ reported overall and split by annotated vs novel — the numbers quoted in the m
 Input is the `mgnifam` table CSV (`id,full_size,rep_length,...,plddt,ptm`): the full-catalogue
 `mgnifam_codon.csv`, or `table_data/mgnifam.csv` for a quick test. Note this is *not* the
 MultiQC `metadata_mqc*.csv`, which carries no pLDDT/pTM columns.
+
+Needs `plotnine` (`pip install plotnine`) and a Times-metric serif font. Times New Roman is used
+when present; otherwise the script falls back to Nimbus Roman, then Liberation Serif (both ship
+with most Linux distributions), and reports which one it used.
 
 ```
 python bin/plot_mgnifam_metadata_distributions.py \
