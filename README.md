@@ -1,6 +1,17 @@
 # mgnifams-post-pipeline-scripts
 Contains post-processing scripts for various stats, after the main MGnifams pipeline finishes execution
 
+## bin/synteny_census.py
+
+Run it:
+
+```
+python synteny_census.py ids.txt \
+  --metadata /path/mgy_proteins_metadata.parquet \
+  --pfam     /path/mgy_proteins_pfam.parquet \
+  --threads 16 --memory-limit 64GB
+```
+
 ## bin/biome_analysis.py
 Streams MGnifam biome blobs from the `mgnifam` SQLite table, counts leaf-level
 biome paths per family, writes a text report, and optionally renders a PNG bar
