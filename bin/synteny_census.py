@@ -12,12 +12,26 @@ MSA), it:
      -- SKIPPED when --contigs is supplied (the contig_ids are already known)
   2. pulls EVERY gene on those contigs (the neighbourhoods) (metadata parquet, query 2)
   3. attaches Pfam annotations to all neighbourhood genes   (pfam parquet,     query 3)
-  4. orders genes per contig, locates the family 'anchor' gene(s), extracts the
-     surrounding window, and tests adjacency to a configurable TARGET Pfam set
-     (default: the GH25 endolysin cassette PF01183 / PF25309)
-  5. classifies each contig as POSITIVE / NEGATIVE(confident) / NEGATIVE(edge-ambiguous)
-     / ISOLATED, dereplicates positives by cluster_rep (independence), records strand
-     co-directionality, and prints a numerator/denominator VERDICT.
+  4. orders genes per contig, locates the family 'anchor' gene(s), and extracts the
+     surrounding window (within --window-genes ranks AND --window-bp bp), then runs in
+     one of two modes:
+
+TWO MODES
+---------
+DISCOVERY (no --targets) -- "I don't know the architecture I'm looking for yet."
+    Ranks every Pfam appearing in the anchors' windows by how many INDEPENDENT contigs
+    (distinct cluster_rep) it neighbours, plus an enrichment ratio against that Pfam's
+    background frequency on the same contigs. Enrichment demotes Pfams that are merely
+    abundant in these communities (transposases, ribosomal proteins) rather than
+    specifically adjacent to the family. Read the table, pick candidates, re-run in TEST
+    mode. This is the entry point for a new family, and it costs nothing extra: every
+    gene on the contigs is already in memory.
+
+TEST (--targets PF...) -- "I have a hypothesis, hold it to a number."
+    Classifies each contig POSITIVE / NEGATIVE(confident) / NEGATIVE(edge-ambiguous) /
+    AMBIGUOUS_EDGE / ISOLATED, dereplicates positives by cluster_rep (independence),
+    records strand co-directionality, and prints a numerator/denominator VERDICT. The
+    neighbour-Pfam table is still written, so you always see what else is around.
 
 Query 2 returns the *whole* contig (all genes), which is what a neighbourhood requires --
 restricting it to the family protein_ids would leave no neighbours to analyse.
@@ -39,13 +53,19 @@ Notes / assumptions
 
 Usage
 -----
+    # DISCOVERY: what does this family sit next to?
+    python synteny_census.py ids.txt \
+        --metadata /path/to/mgy_proteins_metadata.parquet \
+        --pfam     /path/to/mgy_proteins_pfam.parquet
+
+    # TEST: is it the GH25 endolysin cassette, and in how many independent contigs?
     python synteny_census.py ids.txt \
         --metadata /path/to/mgy_proteins_metadata.parquet \
         --pfam     /path/to/mgy_proteins_pfam.parquet \
+        --targets PF01183,PF25309 [--context-pfams PF13472] \
         [--contigs contig_ids.txt] \
-        [--targets PF01183,PF25309] [--context-pfams PF13472] \
         [--window-genes 5] [--window-bp 10000] \
-        [--small-orf-aa 120] [--id-strip-prefix MGYP] \
+        [--small-orf-aa 120] [--id-strip-prefix MGYP] [--top 25] \
         [--outdir output/synteny] [--out-prefix synteny] \
         [--threads 8] [--memory-limit 32GB]
 
@@ -195,7 +215,11 @@ def q3_pfam(con, pfam_path, protein_ids, pid_type):
 # neighbourhood assembly + per-anchor classification
 # ----------------------------------------------------------------------------------
 def classify_anchor(anchor, genes_sorted, targets, ctx, window_genes, window_bp, small_orf_aa):
-    """genes_sorted: list of gene dicts on the contig, ascending by start, with 'rank'."""
+    """genes_sorted: list of gene dicts on the contig, ascending by start, with 'rank'.
+
+    Returns (row, window) where window is the in-window neighbour genes, each annotated
+    with dist_genes/dist_bp/same_strand -- the discovery pass aggregates over it.
+    """
     r = anchor["rank"]
     clen = anchor.get("contig_length")
     if clen and clen > 0:
@@ -207,25 +231,25 @@ def classify_anchor(anchor, genes_sorted, targets, ctx, window_genes, window_bp,
 
     neighbours = [g for g in genes_sorted if g["rank"] != r]
 
-    # find target genes within the window (gene-rank OR bp)
-    hits = []
+    # The window: a neighbour must be within --window-genes ranks AND --window-bp bp.
+    # AND, not OR: with OR the bp cap can never exclude anything, so a gene 2 positions
+    # away but 76 kb down a sparse contig would count as 'adjacent' -- not a cassette.
+    window = []
     for g in neighbours:
-        if not (g["pfams"] & targets):
-            continue
         gap = bp_gap(anchor["start"], anchor["end"], g["start"], g["end"])
         gdist = abs(g["rank"] - r)
-        if gdist <= window_genes or gap <= window_bp:
-            hits.append((gap, gdist, g))
-    hits.sort(key=lambda t: t[0])
+        if gdist <= window_genes and gap <= window_bp:
+            window.append(dict(g, dist_bp=gap, dist_genes=gdist,
+                               same_strand=g["strand_i"] == anchor["strand_i"]))
+
+    hits = sorted((g for g in window if g["pfams"] & targets), key=lambda g: g["dist_bp"])
 
     # cassette context within the window (context pfams + small no-pfam ORFs)
     ctx_present, small_orfs = set(), 0
-    for g in neighbours:
-        gap = bp_gap(anchor["start"], anchor["end"], g["start"], g["end"])
-        if abs(g["rank"] - r) <= window_genes or gap <= window_bp:
-            ctx_present |= (g["pfams"] & ctx)
-            if not g["pfams"] and aa_len(g["start"], g["end"]) <= small_orf_aa:
-                small_orfs += 1
+    for g in window:
+        ctx_present |= (g["pfams"] & ctx)
+        if not g["pfams"] and aa_len(g["start"], g["end"]) <= small_orf_aa:
+            small_orfs += 1
 
     left_observed = left_span >= window_bp
     right_observed = right_span >= window_bp
@@ -241,25 +265,93 @@ def classify_anchor(anchor, genes_sorted, targets, ctx, window_genes, window_bp,
     else:
         status = "AMBIGUOUS_EDGE"          # both sides truncated
 
-    nearest = hits[0][2] if hits else None
-    return {
+    nearest = hits[0] if hits else None
+    row = {
         "protein_id": anchor["protein_id"],
         "contig_id": anchor["contig_id"],
         "contig_name": anchor.get("contig_name"),
         "cluster_rep": anchor["cluster_rep"],
         "anchor_strand": anchor["strand_i"],
         "n_genes_on_contig": len(genes_sorted),
+        "n_genes_in_window": len(window),
         "left_span_bp": int(left_span),
         "right_span_bp": int(right_span),
         "status": status,
         "target_pfam": ";".join(sorted(nearest["pfams"] & targets)) if nearest else "",
         "target_protein_id": nearest["protein_id"] if nearest else "",
-        "dist_genes": hits[0][1] if hits else "",
-        "dist_bp": hits[0][0] if hits else "",
-        "target_same_strand": (nearest["strand_i"] == anchor["strand_i"]) if nearest else "",
+        "dist_genes": nearest["dist_genes"] if nearest else "",
+        "dist_bp": nearest["dist_bp"] if nearest else "",
+        "target_same_strand": nearest["same_strand"] if nearest else "",
         "context_pfams": ";".join(sorted(ctx_present)),
         "small_orf_candidates": small_orfs,
     }
+    return row, window
+
+
+def discover_neighbour_pfams(windows, neigh):
+    """Rank the Pfams that recur in the anchors' windows -- the 'I don't know what I'm
+    looking for yet' pass. Use it to choose --targets, then re-run for a hard verdict.
+
+    windows: list of (anchor_gene, in_window_neighbour_genes).
+    neigh:   every gene on every anchor-bearing contig -- the local background.
+
+    n_indep_contigs (distinct anchor cluster_rep) is the column that matters: 500 hits from
+    one over-sampled genome is one observation. enrichment contrasts the Pfam's frequency
+    among window genes with its frequency across all genes on the same contigs, which
+    demotes Pfams that are merely abundant in these communities (transposases, ribosomal
+    proteins) rather than specifically adjacent to the family.
+    """
+    import statistics
+
+    n_anchors_total = len(windows)
+    contigs, reps, n_anchors = defaultdict(set), defaultdict(set), defaultdict(int)
+    dist_genes, dist_bp, same_strand = defaultdict(list), defaultdict(list), defaultdict(list)
+    win_genes_with_pfam, win_genes_total = defaultdict(int), 0
+
+    for anchor, window in windows:
+        win_genes_total += len(window)
+        seen_here = set()
+        for g in window:
+            for pf in g["pfams"]:
+                win_genes_with_pfam[pf] += 1
+                dist_genes[pf].append(g["dist_genes"])
+                dist_bp[pf].append(g["dist_bp"])
+                same_strand[pf].append(bool(g["same_strand"]))
+                if pf not in seen_here:            # count each anchor once per Pfam
+                    seen_here.add(pf)
+                    n_anchors[pf] += 1
+                    contigs[pf].add(anchor["contig_id"])
+                    reps[pf].add(str(anchor["cluster_rep"]))
+
+    # local background: Pfam frequency across ALL genes on the same contigs
+    bg_total = len(neigh)
+    bg_with_pfam = defaultdict(int)
+    for pfams in neigh["pfams"]:
+        for pf in pfams:
+            bg_with_pfam[pf] += 1
+
+    rows = []
+    for pf in win_genes_with_pfam:
+        obs = win_genes_with_pfam[pf] / win_genes_total if win_genes_total else 0.0
+        bg = bg_with_pfam[pf] / bg_total if bg_total else 0.0
+        rows.append({
+            "pfam": pf,
+            "n_indep_contigs": len(reps[pf]),
+            "n_contigs": len(contigs[pf]),
+            "n_anchors": n_anchors[pf],
+            "frac_anchors": round(n_anchors[pf] / n_anchors_total, 4) if n_anchors_total else 0,
+            "median_dist_genes": statistics.median(dist_genes[pf]),
+            "median_dist_bp": int(statistics.median(dist_bp[pf])),
+            "frac_same_strand": round(sum(same_strand[pf]) / len(same_strand[pf]), 3),
+            "window_gene_freq": round(obs, 5),
+            "contig_bg_freq": round(bg, 5),
+            "enrichment": round(obs / bg, 2) if bg else float("inf"),
+        })
+    ddf = pd.DataFrame(rows)
+    if not ddf.empty:
+        ddf = ddf.sort_values(["n_indep_contigs", "enrichment", "n_anchors"],
+                              ascending=False).reset_index(drop=True)
+    return ddf
 
 
 def ascii_map(genes_sorted, anchor_ids, targets, ctx):
@@ -291,10 +383,15 @@ def parse_args(argv=None):
     ap.add_argument("--contigs", default=None,
                     help="text file of contig_ids (one per line) already known to carry the "
                          "family. Skips the protein_id -> contig_id lookup (query 1).")
-    ap.add_argument("--targets", default="PF01183,PF25309",
-                    help="decisive Pfam accessions (comma-sep). Default: GH25 endolysin.")
-    ap.add_argument("--context-pfams", default="PF13472",
-                    help="reported-but-not-decisive Pfams (e.g. GDSL). Comma-sep.")
+    ap.add_argument("--targets", default=None,
+                    help="decisive Pfam accessions to test adjacency against (comma-sep, "
+                         "e.g. PF01183,PF25309). OMIT for DISCOVERY MODE: no hypothesis is "
+                         "tested, instead every Pfam recurring in the anchors' windows is "
+                         "ranked so you can see what the family actually sits next to.")
+    ap.add_argument("--context-pfams", default="",
+                    help="reported-but-not-decisive Pfams (e.g. GDSL PF13472). Comma-sep.")
+    ap.add_argument("--top", type=int, default=25,
+                    help="how many neighbour Pfams to print in discovery mode")
     ap.add_argument("--window-genes", type=int, default=5)
     ap.add_argument("--window-bp", type=int, default=10000)
     ap.add_argument("--small-orf-aa", type=int, default=120,
@@ -315,8 +412,9 @@ def parse_args(argv=None):
 
 
 def run(args):
-    targets = {pfam_key(t) for t in args.targets.split(",") if t.strip()}
-    ctx = {pfam_key(t) for t in args.context_pfams.split(",") if t.strip()}
+    targets = {pfam_key(t) for t in (args.targets or "").split(",") if t.strip()}
+    ctx = {pfam_key(t) for t in (args.context_pfams or "").split(",") if t.strip()}
+    discovery_only = not targets
 
     inputs = [args.metadata, args.pfam, args.ids] + ([args.contigs] if args.contigs else [])
     for p in inputs:
@@ -327,8 +425,9 @@ def run(args):
     setup_logging(os.path.join(args.outdir, "log.txt"))
     prefix = os.path.join(args.outdir, args.out_prefix)
 
-    LOG.info("START synteny census | targets=%s context=%s window=%dgenes/%dbp",
-             ",".join(sorted(targets)), ",".join(sorted(ctx)) or "-",
+    LOG.info("START synteny census | mode=%s targets=%s context=%s window=%dgenes/%dbp",
+             "DISCOVERY (no --targets: ranking neighbour Pfams)" if discovery_only else "TEST",
+             ",".join(sorted(targets)) or "-", ",".join(sorted(ctx)) or "-",
              args.window_genes, args.window_bp)
     LOG.info("outputs -> %s/", args.outdir)
 
@@ -427,7 +526,7 @@ def run(args):
     neigh["end"] = neigh["end_position"].astype("int64")
     neigh["pfams"] = neigh["pid_str"].map(lambda p: pf_map.get(p, set()))
 
-    per_anchor, maps = [], []
+    per_anchor, maps, windows = [], [], []
     for cid, grp in neigh.groupby("contig_id"):
         grp = grp.sort_values("start").reset_index(drop=True)
         clen = grp["contig_length"].iloc[0] if has_contig_length else None
@@ -442,13 +541,23 @@ def run(args):
             })
         contig_anchors = [x for x in genes if x["protein_id"] in anchor_ids]
         for a in contig_anchors:
-            per_anchor.append(classify_anchor(a, genes, targets, ctx, args.window_genes,
-                                              args.window_bp, args.small_orf_aa))
+            row, window = classify_anchor(a, genes, targets, ctx, args.window_genes,
+                                          args.window_bp, args.small_orf_aa)
+            per_anchor.append(row)
+            windows.append((a, window))
         if contig_anchors:
             maps.append((cid, ascii_map(genes, anchor_ids, targets, ctx)))
 
     adf = pd.DataFrame(per_anchor)
     LOG.info("classified %d anchors on %d contigs", len(adf), adf["contig_id"].nunique())
+
+    # ---- discovery: which Pfams actually recur next to the family? ---------------
+    # Always run: it costs nothing (every gene is already in memory) and it is the only
+    # way to pick --targets when the architecture is not known up front.
+    ddf = discover_neighbour_pfams(windows, neigh)
+    ddf.to_csv(f"{prefix}_neighbour_pfams.tsv", sep="\t", index=False)
+    LOG.info("discovery: %d distinct Pfams in the anchor windows -> %s_neighbour_pfams.tsv",
+             len(ddf), prefix)
 
     # ---- aggregate to per-contig (a contig is POSITIVE if any anchor is) --------
     order = ["POSITIVE", "NEGATIVE", "NEGATIVE_PARTIAL", "AMBIGUOUS_EDGE", "ISOLATED"]
@@ -499,14 +608,66 @@ def run(args):
     def pct(x):
         return "n/a" if x != x else f"{x*100:.0f}%"
 
+    header = ("SYNTENY DISCOVERY  (no --targets: ranking what the family sits next to)"
+              if discovery_only else
+              "SYNTENY CENSUS VERDICT  (target Pfams: " + ", ".join(sorted(targets)) + ")")
     lines = [
         "=" * 72,
-        "SYNTENY CENSUS VERDICT  (target Pfams: " + ", ".join(sorted(targets)) + ")",
+        header,
         "=" * 72,
         f"input protein_ids ............ {n_input}",
         f"mapped to a contig ........... {len(anchor_ids)}",
         f"distinct contigs ............. {n_contigs}",
         "-" * 72,
+    ]
+
+    if discovery_only:
+        n_assessable = n_contigs - n_iso
+        lines += [
+            f"contigs with >=1 neighbour (usable) .. {n_assessable}",
+            f"ISOLATED (lone gene on fragment) ..... {n_iso}",
+            "-" * 72,
+        ]
+        if ddf.empty:
+            lines.append("No Pfam-annotated neighbours in any window -- nothing to rank. The "
+                         "family's neighbourhoods are unannotated (or all anchors are "
+                         "ISOLATED); synteny cannot be assessed from Pfam alone here.")
+        else:
+            top = ddf.head(args.top)
+            lines.append(f"TOP {len(top)} NEIGHBOUR PFAMS  (of {len(ddf)}; ranked by independent "
+                         "contigs, then enrichment)")
+            lines.append("")
+            lines.append(f"{'pfam':<10}{'indep':>6}{'contigs':>8}{'anchors':>8}{'%anch':>7}"
+                         f"{'d_genes':>8}{'d_bp':>8}{'strand':>7}{'enrich':>8}")
+            for _, r in top.iterrows():
+                lines.append(f"{r['pfam']:<10}{r['n_indep_contigs']:>6}{r['n_contigs']:>8}"
+                             f"{r['n_anchors']:>8}{r['frac_anchors']*100:>6.0f}%"
+                             f"{r['median_dist_genes']:>8.0f}{r['median_dist_bp']:>8}"
+                             f"{r['frac_same_strand']:>7.2f}{r['enrichment']:>8.1f}")
+            lines += [
+                "",
+                "indep   = distinct anchor cluster_reps -- THE column to read. Many hits from "
+                "one",
+                "          over-sampled genome are one observation, not many.",
+                "enrich  = how much more often the Pfam sits in the window than on the contigs",
+                "          at large. ~1 means 'merely abundant here', not 'adjacent to you'.",
+                "strand  = fraction co-directional with the anchor (operon-like cassettes are",
+                "          usually co-directional).",
+                "-" * 72,
+                "NEXT: pick candidates from the table, then re-run with a hypothesis to get a",
+                "      hard numerator/denominator verdict, e.g.:",
+                f"      --targets {','.join(ddf.head(2)['pfam'])}",
+            ]
+        lines.append("=" * 72)
+        report = "\n".join(lines)
+        print("\n" + report)
+        with open(f"{prefix}_verdict.txt", "w") as fh:
+            fh.write(report + "\n")
+        LOG.info("DONE (discovery) | %d neighbour Pfams ranked; %d/%d contigs usable",
+                 len(ddf), n_contigs - n_iso, n_contigs)
+        return cdf
+
+    lines += [
         f"POSITIVE  (target adjacent) .......... {n_pos}",
         f"NEGATIVE  (confident, full window) ... {n_neg}",
         f"NEGATIVE  (edge-ambiguous) ........... {n_negp}",
@@ -561,19 +722,25 @@ def self_test():
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:
-        # contig 1: anchor 100 next to target gene 101 (PF01183)      -> POSITIVE
+        # contig 1: anchor 100 next to target gene 101 (PF01183)       -> POSITIVE
         # contig 2: anchor 200, neighbours but no target, long contig  -> NEGATIVE
         # contig 3: anchor 300 alone on the contig                     -> ISOLATED
+        # contig 4: anchor 400 next to PF01183 again (other cluster)   -> POSITIVE
+        # PF09999 sits on contig 2 in-window and on contig 4 far away (out of window),
+        # so discovery must rank PF01183 (2 independent contigs) above it (1).
         meta = pd.DataFrame([
             (1, 100, 1_000, 1_500, 1, 100, 50_000),
             (1, 101, 2_000, 2_600, 1, 101, 50_000),
             (2, 200, 20_000, 20_900, -1, 200, 50_000),
             (2, 201, 30_500, 31_000, 1, 201, 50_000),
             (3, 300, 500, 900, 1, 300, 1_200),
+            (4, 400, 1_000, 1_500, 1, 400, 90_000),
+            (4, 401, 3_000, 3_600, 1, 401, 90_000),
+            (4, 402, 80_000, 80_600, 1, 402, 90_000),
         ], columns=["contig_id", "protein_id", "start_position", "end_position",
                     "strand", "cluster_rep", "contig_length"])
         meta["contig_name"] = "contig_" + meta["contig_id"].astype(str)
-        pfam = pd.DataFrame([(101, 1183), (201, 9999)],
+        pfam = pd.DataFrame([(101, 1183), (201, 9999), (401, 1183), (402, 9999)],
                             columns=["protein_id", "pfam_accession"])
 
         meta_p = os.path.join(tmp, "meta.parquet")
@@ -583,27 +750,39 @@ def self_test():
         meta.to_parquet(meta_p)
         pfam.to_parquet(pfam_p)
         with open(ids_p, "w") as fh:
-            fh.write("MGYP100\nMGYP200\nMGYP300\n")     # exercises --id-strip-prefix
+            fh.write("MGYP100\nMGYP200\nMGYP300\nMGYP400\n")   # exercises --id-strip-prefix
         with open(contigs_p, "w") as fh:
-            fh.write("1\n2\n3\n")
+            fh.write("1\n2\n3\n4\n")
 
-        base = ["--metadata", meta_p, "--pfam", pfam_p, "--targets", "PF01183",
-                "--id-strip-prefix", "MGYP", "--window-bp", "10000",
-                "--outdir", os.path.join(tmp, "out")]
+        outdir = os.path.join(tmp, "out")
+        base = ["--metadata", meta_p, "--pfam", pfam_p, "--id-strip-prefix", "MGYP",
+                "--window-bp", "10000", "--outdir", outdir]
+        tgt = base + ["--targets", "PF01183"]
 
-        cdf = run(parse_args([ids_p] + base))
+        cdf = run(parse_args([ids_p] + tgt))
         got = dict(cdf.set_index("contig_id")["status"])
-        assert got == {1: "POSITIVE", 2: "NEGATIVE", 3: "ISOLATED"}, got
+        assert got == {1: "POSITIVE", 2: "NEGATIVE", 3: "ISOLATED", 4: "POSITIVE"}, got
         assert cdf.loc[cdf.contig_id == 1, "target_pfam"].iloc[0] == "PF01183"
 
         # --contigs must skip query 1 and give an identical answer
-        cdf2 = run(parse_args([ids_p] + base + ["--contigs", contigs_p]))
+        cdf2 = run(parse_args([ids_p] + tgt + ["--contigs", contigs_p]))
         assert dict(cdf2.set_index("contig_id")["status"]) == got
+
+        # discovery mode: no --targets, the recurring neighbour must surface on its own
+        run(parse_args([ids_p] + base))
+        ddf = pd.read_csv(os.path.join(outdir, "synteny_neighbour_pfams.tsv"), sep="\t")
+        assert ddf.iloc[0]["pfam"] == "PF01183", ddf
+        assert ddf.iloc[0]["n_indep_contigs"] == 2, ddf   # contigs 1 and 4, distinct reps
+        # PF09999's far-away copy on contig 4 is out of window -> only 1 independent contig
+        assert ddf.set_index("pfam").loc["PF09999", "n_indep_contigs"] == 1, ddf
+        # in-window enrichment must beat the contig background
+        assert ddf.iloc[0]["enrichment"] > 1.0, ddf
 
         # integer pfam accession 1183 must match the 'PF01183' target string
         assert pfam_key(1183) == pfam_key("PF01183.7") == "PF01183"
 
-    print("\nself-test OK: POSITIVE/NEGATIVE/ISOLATED, --contigs skip, pfam id normalisation")
+    print("\nself-test OK: POSITIVE/NEGATIVE/ISOLATED, --contigs skip, discovery ranking, "
+          "pfam id normalisation")
 
 
 def main():
