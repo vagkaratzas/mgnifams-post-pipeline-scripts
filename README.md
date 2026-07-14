@@ -318,6 +318,19 @@ own `bin/`. See `pipelines/annotation_percentages/README.md`.
 nextflow run pipelines/annotation_percentages/main.nf -profile singularity
 ```
 
+## pipelines/run_prediction_annotations
+Mini local Nextflow workflow (nf-core layout) that runs the deep-learning predictors
+FUNGTION and CAALM on an amino acid FASTA, using the nf-core `fungtion/fungtion` and
+`caalm/caalm` modules. Their `*/downloadmodels` modules fetch the model weights unless
+`--fungtion_models` / `--caalm_models` point at already-downloaded ones. Both predictor
+modules are labelled `process_gpu`, so `-profile gpu` requests an accelerator and selects
+the CUDA container/env. See `pipelines/run_prediction_annotations/README.md`.
+
+```
+nextflow run pipelines/run_prediction_annotations/main.nf \
+  -profile singularity,gpu,slurm --input_fasta <proteins.fasta>
+```
+
 ## extract_pdb_scores.py
 From the mgnifams workdir, find and extract esmfold predicted plddt and ptm scores along with name and length in csv format.
 
