@@ -62,7 +62,7 @@ Usage
         [--window-genes 5] [--window-bp 10000] [--id-strip-prefix MGYP] \
         [--outdir output/synteny] [--top 25] [--threads 16] [--memory-limit 64GB]
 
-    python synteny_census.py --self-test      # synthetic end-to-end check
+Tests: tests/test_synteny_census.py (pytest).
 """
 
 import argparse
@@ -358,11 +358,9 @@ def parse_args(argv=None):
     ap.add_argument("--top", type=int, default=25, help="partners to print (default 25)")
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--memory-limit", default=None)
-    ap.add_argument("--self-test", action="store_true",
-                    help="run a synthetic end-to-end check and exit")
     args = ap.parse_args(argv)
-    if not args.self_test and not (args.ids and args.metadata and args.pfam):
-        ap.error("ids, --metadata and --pfam are required (unless --self-test)")
+    if not (args.ids and args.metadata and args.pfam):
+        ap.error("ids, --metadata and --pfam are required")
     return args
 
 
@@ -596,93 +594,9 @@ def run(args):
     return pdf, adf
 
 
-# ----------------------------------------------------------------------------------
-# self-test -- the shipped test parquets have one gene per contig, so they cannot
-# exercise any of this. Build a synthetic store that does.
-# ----------------------------------------------------------------------------------
-def self_test():
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmp:
-        # contig 1: anchor 100 (+). PF01183 one gene downstream, unannotated cluster 900 two
-        #           genes downstream.
-        # contig 4: anchor 400 (-), an independent lineage, SAME arrangement but mirrored in
-        #           coordinates -- signed offsets must recognise it as identical.
-        # contig 2: anchor 200 (+), FULL window, no PF01183 -> a confident absence.
-        # contig 3: anchor 300 alone on a 1.2 kb fragment -> ISOLATED, says nothing.
-        meta = pd.DataFrame([
-            (1, 100, 15_000, 15_500, 1, 100, 50_000),
-            (1, 101, 16_000, 16_600, 1, 101, 50_000),
-            (1, 102, 17_000, 17_200, 1, 900, 50_000),
-            (2, 200, 20_000, 20_900, 1, 200, 50_000),
-            (2, 201, 30_500, 31_000, 1, 201, 50_000),
-            (3, 300, 500, 900, 1, 300, 1_200),
-            (4, 402, 57_000, 57_200, -1, 900, 90_000),
-            (4, 401, 58_500, 59_000, -1, 401, 90_000),
-            (4, 400, 60_000, 60_500, -1, 400, 90_000),
-        ], columns=["contig_id", "protein_id", "start_position", "end_position",
-                    "strand", "cluster_rep", "contig_length"])
-        meta["contig_name"] = "contig_" + meta["contig_id"].astype(str)
-        # float columns on purpose: forces the int/float mix that made row-wise iteration
-        # upcast protein_id to float and silently drop every Pfam on real data.
-        pfam = pd.DataFrame([(101, 1183, 1e-12), (201, 9999, 3e-4), (401, 1183, 2e-12)],
-                            columns=["protein_id", "pfam_accession", "i_evalue"])
-
-        meta_p, pfam_p = os.path.join(tmp, "m.parquet"), os.path.join(tmp, "p.parquet")
-        ids_p, contigs_p = os.path.join(tmp, "ids.txt"), os.path.join(tmp, "c.txt")
-        meta.to_parquet(meta_p)
-        pfam.to_parquet(pfam_p)
-        open(ids_p, "w").write("MGYP100/1-176\nMGYP200\nMGYP300\nMGYP400\n")
-        open(contigs_p, "w").write("1\n2\n3\n4\n")
-
-        base = ["--metadata", meta_p, "--pfam", pfam_p, "--id-strip-prefix", "MGYP",
-                "--outdir", os.path.join(tmp, "out")]
-        pdf, adf = run(parse_args([ids_p] + base))
-        p = pdf.set_index("partner")
-
-        # assessability is target-independent: 3 FULL anchors, 1 ISOLATED
-        assert sorted(adf["status"]) == ["FULL", "FULL", "FULL", "ISOLATED"], adf["status"]
-
-        # PF01183: 2 independent lineages, one gene downstream, co-directional, always
-        assert p.loc["PF01183", "n_indep"] == 2
-        assert p.loc["PF01183", "offset"] == 1          # signed: downstream on BOTH contigs
-        assert p.loc["PF01183", "same_strand"]
-        assert p.loc["PF01183", "frac_conserved"] == 1.0
-        assert p.loc["PF01183", "frac_indep"] == round(2 / 3, 3)   # contig 2 is the absence
-        assert p.loc["PF01183", "enrichment"] > 1.0
-
-        # the unannotated neighbour is found too, by cluster_rep, at a conserved +2
-        assert p.loc["cluster:900", "type"] == "unannotated_cluster"
-        assert p.loc["cluster:900", "n_indep"] == 2
-        assert p.loc["cluster:900", "offset"] == 2
-        assert p.loc["cluster:900", "frac_conserved"] == 1.0
-
-        # a one-off neighbour must not out-rank the recurrent ones
-        assert p.loc["PF09999", "n_indep"] == 1
-        assert pdf.iloc[0]["partner"] in {"PF01183", "cluster:900"}
-
-        # --contigs skips step 1 and changes nothing
-        pdf2, _ = run(parse_args([ids_p] + base + ["--contigs", contigs_p]))
-        assert pdf2.equals(pdf)
-
-        # --targets adds the verdict without changing the ranking
-        _, adf3 = run(parse_args([ids_p] + base + ["--targets", "PF01183"]))
-        assert list(adf3[adf3.target_hit != ""]["contig_id"]) == [1, 4]
-
-        assert pfam_key(1183) == pfam_key("PF01183.7") == "PF01183"
-
-    print("\nself-test OK: signed offsets (strand-mirrored contigs agree), unannotated "
-          "cluster partners,\nassessable denominator, order conservation, --contigs skip")
-
-
 def main():
-    args = parse_args()
-    if args.self_test:
-        logging.basicConfig(level=logging.INFO)
-        self_test()
-        return
-    run(args)
+    run(parse_args())
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
