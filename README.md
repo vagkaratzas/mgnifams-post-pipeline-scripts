@@ -94,11 +94,12 @@ results are identical. The metadata is occurrence-level — one `protein_id` can
 of contigs — so this file is usually far longer than the ids file, and your anchor count will
 far exceed your input count. That is also why independence is measured in `cluster_rep`s.
 
-Self-check (synthetic fixtures; covers signed offsets on strand-mirrored contigs, unannotated
-cluster partners, the assessable denominator, order conservation and the `--contigs` skip):
+Tests (synthetic fixtures; cover signed offsets on strand-mirrored contigs, unannotated
+cluster partners, the assessable denominator, order conservation, the `--contigs` skip, the
+`AND` window cap and the float-column Pfam-attach regression):
 
 ```
-python bin/synteny_census.py --self-test
+pytest tests/test_synteny_census.py
 ```
 
 ## bin/biome_analysis.py
