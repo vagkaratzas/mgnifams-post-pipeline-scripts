@@ -447,8 +447,10 @@ def run(args):
     LOG.info("[3/3] fetching Pfams for %d neighbourhood genes ...", neigh["pid_str"].nunique())
     pf = q3_pfam(con, args.pfam, sorted(neigh["pid_str"].unique()), pfam_schema[pfam_pid_col])
     pf_map = defaultdict(set)
-    for _, row in pf.iterrows():
-        pf_map[str(row[pfam_pid_col])].add(pfam_key(row[pfam_acc_col]))
+    # iterate columns, not rows: iterrows upcasts a mixed int/float row to float64, turning
+    # protein_id 917027859 into the string "917027859.0" which never matches neigh.pid_str.
+    for pid, acc in zip(pf[pfam_pid_col], pf[pfam_acc_col]):
+        pf_map[str(pid)].add(pfam_key(acc))
     LOG.info("[3/3] done: %d Pfam rows for %d annotated genes", len(pf), len(pf_map))
 
     # ---- windows -----------------------------------------------------------------
@@ -621,8 +623,10 @@ def self_test():
         ], columns=["contig_id", "protein_id", "start_position", "end_position",
                     "strand", "cluster_rep", "contig_length"])
         meta["contig_name"] = "contig_" + meta["contig_id"].astype(str)
-        pfam = pd.DataFrame([(101, 1183), (201, 9999), (401, 1183)],
-                            columns=["protein_id", "pfam_accession"])
+        # float columns on purpose: forces the int/float mix that made row-wise iteration
+        # upcast protein_id to float and silently drop every Pfam on real data.
+        pfam = pd.DataFrame([(101, 1183, 1e-12), (201, 9999, 3e-4), (401, 1183, 2e-12)],
+                            columns=["protein_id", "pfam_accession", "i_evalue"])
 
         meta_p, pfam_p = os.path.join(tmp, "m.parquet"), os.path.join(tmp, "p.parquet")
         ids_p, contigs_p = os.path.join(tmp, "ids.txt"), os.path.join(tmp, "c.txt")
