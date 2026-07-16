@@ -107,13 +107,14 @@ Renders the `*_maps.txt` output of `synteny_census.py` into one publication-read
 600-dpi PNG per contig: gene arrows drawn to scale on a bp axis, coloured by whole-protein
 family assignment (Pfam or MGnifams), with the anchor gene highlighted. Genes with no Pfam
 (`cluster:...` in the map) are drawn as unassigned grey. Labels are staggered over two rows
-and dropped where a contig is too crowded for them to stay legible.
+and dropped where a contig is too crowded for them to stay legible. The PNG is cropped to the
+drawn content with a 2 px white margin.
 ```
 python bin/make_contig_figure.py \
   --input <path/to/partners_maps.txt> \
   --output <path/to/figures/>
 ```
-Requires `cairosvg`. Tests:
+Requires `cairosvg` and `pillow`. Tests:
 ```
 pytest tests/test_make_contig_figure.py
 ```
