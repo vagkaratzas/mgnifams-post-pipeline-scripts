@@ -14,10 +14,15 @@ Usage::
 """
 
 import argparse
+import io
 import re
 from pathlib import Path
 
 import cairosvg
+from PIL import Image, ImageChops
+
+PAD = 2                           # px of white kept around the cropped content
+DPI = 600
 
 GENE_RE = re.compile(
     r"\[(\d+)-(\d+)\(([+-?])\)\s+(\S+)\s+\|\s+([^|]+?)\s+\|\s+(\d+)aa(\s+<<\w+)?\]"
@@ -238,9 +243,15 @@ def main(argv=None):
     for contig, genes in parse_maps(args.input.read_text()):
         if not genes:
             continue
-        out = args.output / f"contig_{contig}.png"
-        cairosvg.svg2png(bytestring=render(contig, genes).encode(),
-                         write_to=str(out), scale=600 / 96)
+        png = cairosvg.svg2png(bytestring=render(contig, genes).encode(),
+                               scale=DPI / 96)
+        img = Image.open(io.BytesIO(png)).convert("RGB")
+        # the canvas is sized for the widest possible contig, so trim it back to
+        # what was actually drawn
+        x0, t, r, b = ImageChops.invert(img).getbbox()
+        img.crop((max(x0 - PAD, 0), max(t - PAD, 0),
+                  min(r + PAD, img.width), min(b + PAD, img.height))
+                 ).save(args.output / f"contig_{contig}.png", dpi=(DPI, DPI))
         n += 1
     print(f"wrote {n} PNGs to {args.output}")
 
