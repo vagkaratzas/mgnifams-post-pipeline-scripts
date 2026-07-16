@@ -102,6 +102,22 @@ cluster partners, the assessable denominator, order conservation, the `--contigs
 pytest tests/test_synteny_census.py
 ```
 
+## bin/make_contig_figure.py
+Renders the `*_maps.txt` output of `synteny_census.py` into one publication-ready,
+600-dpi PNG per contig: gene arrows drawn to scale on a bp axis, coloured by whole-protein
+family assignment (Pfam or MGnifams), with the anchor gene highlighted. Genes with no Pfam
+(`cluster:...` in the map) are drawn as unassigned grey. Labels are staggered over two rows
+and dropped where a contig is too crowded for them to stay legible.
+```
+python bin/make_contig_figure.py \
+  --input <path/to/partners_maps.txt> \
+  --output <path/to/figures/>
+```
+Requires `cairosvg`. Tests:
+```
+pytest tests/test_make_contig_figure.py
+```
+
 ## bin/biome_analysis.py
 Streams MGnifam biome blobs from the `mgnifam` SQLite table, counts leaf-level
 biome paths per family, writes a text report, and optionally renders a PNG bar
