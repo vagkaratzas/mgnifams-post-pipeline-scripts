@@ -341,6 +341,27 @@ def test_rank_partners_counts_anchor_once_per_partner():
     assert row["n_anchors"] == 1                      # deduped, not 2
 
 
+def test_rank_partners_lineage_votes_its_modal_arrangement():
+    """A lineage with several anchors casts its MODAL arrangement, not its first.
+
+    Dereplication still gives the lineage one vote; that vote must reflect all of its
+    anchors, not whichever one groupby happened to sort first.
+    """
+    def _anchor(offset, same_strand):
+        return {"rep": "A", "status": "FULL", "contig_id": 1, "window": [
+            {"pfams": {"PF01183"}, "cluster_rep": 1, "gap_bp": 100, "start": 1, "end": 300,
+             "offset": offset, "same_strand": same_strand},
+        ]}
+
+    # first anchor is the ODD one out; the lineage's majority is (-1, same)
+    anchors = [_anchor(2, False), _anchor(-1, True), _anchor(-1, True)]
+    neigh = pd.DataFrame({"pfams": [{"PF01183"}], "cluster_rep": [1]})
+    pdf, _ = M.rank_partners(anchors, neigh, set())
+    row = pdf.set_index("partner").loc["PF01183"]
+    assert row["n_indep"] == 1                        # still one lineage, one vote
+    assert (row["offset"], row["same_strand"]) == (-1, True)
+
+
 def test_main_entrypoint(monkeypatch, tmp_path):
     argv, _ = _store(tmp_path)
     monkeypatch.setattr("sys.argv", ["synteny_census.py"] + argv)
