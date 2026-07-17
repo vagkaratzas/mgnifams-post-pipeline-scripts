@@ -30,7 +30,9 @@ copies of one over-sampled genome are one observation, not 300):
               which is the difference between synteny and mere co-occurrence.
   conserved   fraction of independent contigs showing the MODAL arrangement (same offset,
               same relative strand). This is the synteny statistic: co-occurrence says the
-              gene is near, conservation says it is in the same place every time.
+              gene is near, conservation says it is in the same place every time. A lineage
+              with several anchors votes its own modal arrangement, so a multi-anchor contig
+              is neither ignored nor able to outvote a single-anchor lineage.
   frac        positives / (positives + confident negatives), where a confident negative is
               an anchor whose FULL window fits on the contig and lacks the partner. Anchors
               truncated by a contig edge cannot testify to absence and are excluded.
@@ -256,7 +258,8 @@ def rank_partners(anchors, neigh, targets):
     assessable_reps = {a["rep"] for a in anchors if a["status"] == "FULL"}
 
     reps, contigs, n_anch = defaultdict(set), defaultdict(set), Counter()
-    gaps, aas, arrangements = defaultdict(list), defaultdict(list), defaultdict(dict)
+    gaps, aas = defaultdict(list), defaultdict(list)
+    arrangements = defaultdict(lambda: defaultdict(Counter))
     win_hits, win_total = Counter(), 0
 
     for a in anchors:
@@ -273,8 +276,10 @@ def rank_partners(anchors, neigh, targets):
                 n_anch[key] += 1
                 reps[key].add(a["rep"])
                 contigs[key].add(a["contig_id"])
-                # one arrangement per independent lineage: first anchor of each cluster_rep
-                arrangements[key].setdefault(a["rep"], (g["offset"], bool(g["same_strand"])))
+                # one ballot per anchor; the lineage's vote is the mode of its ballots, so a
+                # contig carrying several anchors is neither dropped nor able to outvote a
+                # single-anchor lineage
+                arrangements[key][a["rep"]][(g["offset"], bool(g["same_strand"]))] += 1
 
     # background: partner frequency across ALL genes on the same contigs
     bg_total = len(neigh)
@@ -287,8 +292,8 @@ def rank_partners(anchors, neigh, targets):
     for key in n_anch:
         pos = reps[key]
         neg = assessable_reps - pos                # FULL window, partner absent
-        arr = arrangements[key]
-        modal, n_modal = Counter(arr.values()).most_common(1)[0]
+        ballots = [c.most_common(1)[0][0] for c in arrangements[key].values()]
+        modal, n_modal = Counter(ballots).most_common(1)[0]
         obs = win_hits[key] / win_total if win_total else 0.0
         bg = bg_hits[key] / bg_total if bg_total else 0.0
         rows.append({
@@ -300,7 +305,7 @@ def rank_partners(anchors, neigh, targets):
             "frac_indep": round(len(pos) / (len(pos) + len(neg)), 3) if (pos or neg) else "",
             "offset": modal[0],
             "same_strand": modal[1],
-            "frac_conserved": round(n_modal / len(arr), 3),
+            "frac_conserved": round(n_modal / len(ballots), 3),
             "median_gap_bp": int(statistics.median(gaps[key])),
             "median_aa_len": int(statistics.median(aas[key])),
             "enrichment": round(obs / bg, 2) if bg else float("inf"),
