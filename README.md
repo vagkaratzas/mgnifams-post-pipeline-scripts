@@ -436,6 +436,16 @@ own `bin/`. See `pipelines/annotation_percentages/README.md`.
 nextflow run pipelines/annotation_percentages/main.nf -profile singularity
 ```
 
+## pipelines/uniprot_annotation_percentages
+Sister of `annotation_percentages` for UniProt FASTA input: runs two real `hmmsearch`es —
+Pfam (`--cut_ga`) and MGnifams (E-value) — then compares Pfam-only, MGnifams-only and the
+Pfam+MGnifams union at sequence and residue level (each exclusive set reported too), plus a
+provenance report of DB checksums and tool versions. See `pipelines/uniprot_annotation_percentages/README.md`.
+
+```
+nextflow run pipelines/uniprot_annotation_percentages/main.nf -profile test,singularity
+```
+
 ## pipelines/run_prediction_annotations
 Mini local Nextflow workflow (nf-core layout) that runs the deep-learning predictors
 FUNGTION and CAALM on an amino acid FASTA, using the nf-core `fungtion/fungtion` and

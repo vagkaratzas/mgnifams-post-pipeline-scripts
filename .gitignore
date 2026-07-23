@@ -7,6 +7,7 @@ novel
 .nextflow/
 .nextflow.log*
 work/
+tmp/
 
 nmpfamsdb.hmm.gz
 metadata_mqc_codon.csv
