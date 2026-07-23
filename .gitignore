@@ -8,6 +8,7 @@ novel
 .nextflow.log*
 work/
 tmp/
+pipelines/conf/local.config
 
 nmpfamsdb.hmm.gz
 metadata_mqc_codon.csv
