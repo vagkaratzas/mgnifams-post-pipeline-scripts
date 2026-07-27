@@ -30,8 +30,13 @@ def cluster(hits, fraction=0.5):
     return mod.cluster_hits(hits, FAMILY_TO_CLAN, fraction)
 
 
-def chips(metadata, fraction=0.5):
-    return mod.build_chips(metadata, FAMILY_TO_CLAN, CLAN_TO_REP, PFAM_MAPPING, BASE_URL, fraction)
+PFAM_TO_CLAN = {"PF00003": "CL0003", "PF00004": "CL0003", "PF00001": "CL0001"}
+
+
+def chips(metadata, fraction=0.5, pfam_to_clan=None):
+    return mod.build_chips(metadata, FAMILY_TO_CLAN, CLAN_TO_REP, PFAM_MAPPING,
+                           PFAM_TO_CLAN if pfam_to_clan is None else pfam_to_clan,
+                           BASE_URL, fraction)
 
 
 # --- Phase 1: pure functions -------------------------------------------------
@@ -113,14 +118,14 @@ def test_mgnifam_chip_spans_the_whole_merged_group():
 
 
 def test_pfam_chip_falls_back_to_the_accession_when_unmapped():
-    chip = mod.pfam_chip(["PF09999", 1e-04, 45.0, 1, 30, 200, 230], PFAM_MAPPING)
+    chip = mod.pfam_chip([("PF09999", 200, 230)], PFAM_TO_CLAN, PFAM_MAPPING)
 
     assert chip.id == "PF09999"
     assert chip.name == "PF09999"
 
 
 def test_pfam_chip_uses_alignment_coordinates_not_hmm_coordinates():
-    chip = mod.pfam_chip(["PF00001", 1e-05, 50.0, 1, 60, 200, 260], PFAM_MAPPING)
+    chip, = chips({"p": [["PF00001", 1e-05, 50.0, 1, 60, 200, 260]]})
 
     assert (chip.start, chip.end) == (200, 260)
 
@@ -204,13 +209,13 @@ MAPPING = FIXTURES / "pfam_mapping_dummy.tsv"
 
 def count(metadata_rows, fraction=0.5):
     return mod.count_architectures(metadata_rows, FAMILY_TO_CLAN, CLAN_TO_REP, PFAM_MAPPING,
-                                   BASE_URL, fraction, log_every=1000)
+                                   PFAM_TO_CLAN, BASE_URL, fraction, log_every=1000)
 
 
 def test_rows_without_mgnifam_hits_are_skipped():
     rows = list(mod.iter_metadata(PROTEINS, use_prefilter=False))
 
-    assert len(rows) == 11
+    assert len(rows) == 17
     assert all(row.get("m") for row in rows)
 
 
@@ -287,7 +292,19 @@ def test_end_to_end_cli_run_over_the_dummy_input(tmp_path):
                     "--output-dir", str(tmp_path)], check=True)
 
     assert sorted(p.stem for p in tmp_path.glob("*.json")) == [
-        "100", "101", "102", "200", "201", "202", "300", "400"]
+        "100", "101", "102", "200", "201", "202", "300", "400", "500"]
+
+    # Family 500 carries every Pfam clan case; the merged chip links to the InterPro set page.
+    architectures = {
+        "\t".join(d["id"] for d in c["domains"]): c
+        for c in json.loads((tmp_path / "500.json").read_text())["architecture_containers"]}
+    assert architectures["CL0003\t500"]["architecture_text"] == "2"
+    assert architectures["CL0003\t500"]["domains"][0] == {
+        "id": "CL0003", "color": mod.string_to_hex_color("Pfam clan CL0003"),
+        "link": "https://www.ebi.ac.uk/interpro/set/pfam/CL0003/", "name": "Pfam clan CL0003",
+        "font_color": mod.decide_font_color(mod.string_to_hex_color("Pfam clan CL0003"))}
+    assert set(architectures) == {"CL0003\t500", "PF00003\tPF00004\t500",
+                                  "PF00001\tPF00003\t500", "PF00003\tPF00005\t500"}
 
     top = json.loads((tmp_path / "300.json").read_text())["architecture_containers"][0]
     assert top["architecture_text"] == "2"
@@ -306,18 +323,106 @@ def test_pfam_mapping_ignores_a_trailing_clan_column(tmp_path):
                     "PF00001\t7 transmembrane receptor (rhodopsin family)\tCL0192\n"
                     "PF00015\tMethyl-accepting chemotaxis protein (MCP) signalling domain\t\n")
 
-    mapping = mod.load_pfam_mapping(path)
+    mapping, clans = mod.load_pfam_mapping(path)
 
     assert mapping == {
         "PF00001": "7 transmembrane receptor (rhodopsin family)",
         "PF00015": "Methyl-accepting chemotaxis protein (MCP) signalling domain",
     }
+    assert clans == {"PF00001": "CL0192"}
 
 
 def test_pfam_mapping_still_reads_the_two_column_form(tmp_path):
     path = tmp_path / "mapping.tsv"
     path.write_text("PF00006\tATP synthase alpha/beta family, nucleotide-binding domain\n")
 
-    mapping = mod.load_pfam_mapping(path)
+    mapping, clans = mod.load_pfam_mapping(path)
 
     assert mapping == {"PF00006": "ATP synthase alpha/beta family, nucleotide-binding domain"}
+    assert clans == {}
+
+
+# --- Pfam clan collapsing ----------------------------------------------------
+
+
+def test_same_clan_overlapping_pfams_merge_into_one_clan_chip():
+    key = mod.architecture_key(chips({
+        "p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52],
+              ["PF00004", 1e-04, 45.0, 1, 60, 5, 82]],
+    }))
+
+    assert key == "CL0003"
+
+
+def test_same_clan_disjoint_pfams_stay_separate():
+    key = mod.architecture_key(chips({
+        "p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52],
+              ["PF00004", 1e-04, 45.0, 1, 60, 200, 260]],
+    }))
+
+    assert key == "PF00003\tPF00004"
+
+
+def test_different_clan_overlapping_pfams_stay_separate():
+    key = mod.architecture_key(chips({
+        "p": [["PF00001", 1e-05, 50.0, 1, 60, 1, 52],
+              ["PF00003", 1e-04, 45.0, 1, 60, 1, 52]],
+    }))
+
+    assert key == "PF00001\tPF00003"
+
+
+def test_an_unclanned_pfam_never_merges_and_logs_no_warning(caplog):
+    with caplog.at_level("WARNING"):
+        key = mod.architecture_key(chips({
+            "p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52],
+                  ["PF09999", 1e-04, 45.0, 1, 60, 1, 52]],
+        }))
+
+    assert key == "PF00003\tPF09999"
+    assert caplog.text == ""
+
+
+def test_a_lone_pfam_in_a_clan_keeps_its_own_label():
+    chip, = chips({"p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52]]})
+
+    assert chip.id == "PF00003"
+
+
+def test_pfam_overlap_boundary_splits_architectures_like_mgnifams():
+    at_fifty = mod.architecture_key(chips({
+        "p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 100],
+              ["PF00004", 1e-04, 45.0, 1, 60, 51, 150]],
+    }))
+    at_fifty_one = mod.architecture_key(chips({
+        "p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 100],
+              ["PF00004", 1e-04, 45.0, 1, 60, 50, 149]],
+    }))
+
+    assert at_fifty == "PF00003\tPF00004"
+    assert at_fifty_one == "CL0003"
+
+
+def test_an_empty_clan_map_disables_pfam_merging(caplog):
+    with caplog.at_level("WARNING"):
+        key = mod.architecture_key(chips({
+            "p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52],
+                  ["PF00004", 1e-04, 45.0, 1, 60, 5, 82]],
+        }, pfam_to_clan={}))
+
+    assert key == "PF00003\tPF00004"
+    assert caplog.text == ""
+
+
+def test_resolve_chip_links_a_pfam_clan_to_its_interpro_set_page():
+    domain = mod.resolve_chip("CL0172", CLAN_TO_REP, PFAM_MAPPING, BASE_URL)
+
+    assert domain["name"] == "Pfam clan CL0172"
+    assert domain["link"] == "https://www.ebi.ac.uk/interpro/set/pfam/CL0172/"
+
+
+def test_resolve_chip_still_links_a_lone_pfam_to_its_entry_page():
+    domain = mod.resolve_chip("PF00001", CLAN_TO_REP, PFAM_MAPPING, BASE_URL)
+
+    assert domain["name"] == "Alpha domain"
+    assert domain["link"] == "https://www.ebi.ac.uk/interpro/entry/pfam/PF00001"
