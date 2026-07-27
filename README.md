@@ -482,14 +482,6 @@ Given two of the mgnifams output tables csvs as input (mgnifam_proteins.csv and 
 Given a similarities.csv, produces a list of redundant fam ids as well as the similarities edgelist from 0.5 <= x < 0.95.
 If similarity >= 0.95, keep the bigger family. If same, keep family with smaller id.
 
-## assign_correct_domain_ids.py
-After removing redundant, filenames do not correspond to family ids inside the domain architecture.
-This script map it properly to the basename of the file.
-
-> **Do not run this on the output of `parse_domain_architectures.py`.** It rewrites every domain
-> whose name contains `MGnifam`, which would flatten clan chips (`MGnifam clan 233`) back into
-> single-family chips.
-
 ## parse_domain_architectures.py
 Builds the per-family domain architecture JSONs consumed by the site's Domain architecture card,
 from the re-annotated proteins CSV (`metadata` column, `"p"` for Pfam and `"m"` for MGnifam hits).
