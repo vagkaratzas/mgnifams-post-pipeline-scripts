@@ -488,8 +488,8 @@ from the re-annotated proteins CSV (`metadata` column, `"p"` for Pfam and `"m"` 
 Pfam hits become one chip each, positioned by their alignment coordinates; MGnifam hits are
 collapsed by clan, so hits from the same clan that overlap by more than `--overlap-fraction` of the
 shorter hit render as a single `MGnifam clan <N>` chip linking to that clan's representative family.
-Chips are ordered by start position, then by length, then alphabetically. Behaviour is specified in
-[SPEC.md](SPEC.md).
+Hits from different clans never merge, however much they overlap. Chips are ordered by alignment
+start, then by length (shortest first), then alphabetically by id.
 
 Every family in the clan file gets a JSON, including an empty one when it had no annotated
 sequence; those ids are also listed in `missing_families.txt` so nothing silently disappears.
@@ -501,6 +501,10 @@ python bin/parse_domain_architectures.py \
   --pfam-mapping pfam_mapping.tsv \
   --output-dir output/domain_results
 ```
+
+`--pfam-mapping` accepts either `accession<TAB>name` or `pfam_id<TAB>name<TAB>clan_id`. Columns
+after the name are ignored, along with a header row and any line whose first field is not a `PF…`
+accession. The Pfam clan column is not used; only MGnifam hits are collapsed by clan.
 
 Options: `--overlap-fraction` (default `0.5`), `--top` (default `15`), `--base-url`, `--log-every`,
 and `--no-prefilter` to skip the `zcat | grep` prefilter that discards rows without an `"m"`

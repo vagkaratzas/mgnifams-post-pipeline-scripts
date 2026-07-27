@@ -295,3 +295,29 @@ def test_end_to_end_cli_run_over_the_dummy_input(tmp_path):
 
     assert json.loads((tmp_path / "400.json").read_text()) == {"architecture_containers": []}
     assert (tmp_path / "missing_families.txt").read_text() == "400\n"
+
+
+# --- pfam mapping file formats -----------------------------------------------
+
+
+def test_pfam_mapping_ignores_a_trailing_clan_column(tmp_path):
+    path = tmp_path / "mapping.tsv"
+    path.write_text("pfam_id\tname\tclan_id\n"
+                    "PF00001\t7 transmembrane receptor (rhodopsin family)\tCL0192\n"
+                    "PF00015\tMethyl-accepting chemotaxis protein (MCP) signalling domain\t\n")
+
+    mapping = mod.load_pfam_mapping(path)
+
+    assert mapping == {
+        "PF00001": "7 transmembrane receptor (rhodopsin family)",
+        "PF00015": "Methyl-accepting chemotaxis protein (MCP) signalling domain",
+    }
+
+
+def test_pfam_mapping_still_reads_the_two_column_form(tmp_path):
+    path = tmp_path / "mapping.tsv"
+    path.write_text("PF00006\tATP synthase alpha/beta family, nucleotide-binding domain\n")
+
+    mapping = mod.load_pfam_mapping(path)
+
+    assert mapping == {"PF00006": "ATP synthase alpha/beta family, nucleotide-binding domain"}

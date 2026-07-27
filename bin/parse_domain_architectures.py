@@ -54,15 +54,25 @@ def load_clan_membership(clan_membership_file):
 
 
 def load_pfam_mapping(pfam_mapping_file):
-    """Return accession -> human readable name."""
+    """Return accession -> human readable name.
+
+    Accepts the two-column `accession<TAB>name` form and the wider
+    `pfam_id<TAB>name<TAB>clan_id` form; anything past the name is ignored, as is a header row.
+    """
     pfam_mapping = {}
+    skipped = 0
 
     with open(pfam_mapping_file) as handle:
         for line in handle:
-            accession, name = line.rstrip("\n").split("\t", 1)
-            pfam_mapping[accession] = name
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) < 2 or not fields[0].startswith("PF"):
+                skipped += 1
+                continue
+            pfam_mapping[fields[0]] = fields[1]
 
     log.info(f"Loaded {len(pfam_mapping)} pfam entries")
+    if skipped:
+        log.info(f"Skipped {skipped} non-accession lines in {pfam_mapping_file}")
 
     return pfam_mapping
 
