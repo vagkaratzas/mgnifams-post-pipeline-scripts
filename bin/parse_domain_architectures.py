@@ -6,9 +6,18 @@ See SPEC.md for the frozen behaviour. Replaces the pipeline's parse_domains.py, 
 per-family TSVs from the old MGnify protein database and assumed one MGnifam hit per sequence.
 """
 
+import argparse
 import csv
+import gzip
+import io
+import json
 import logging
-from collections import namedtuple
+import os
+import subprocess
+import sys
+import time
+from collections import Counter, defaultdict, namedtuple
+from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -185,3 +194,200 @@ def calculate_luminosity(rgb):
 
 def decide_font_color(hex_color):
     return 'black' if calculate_luminosity(hex_to_rgb(hex_color)) > 0.2 else 'white'
+
+
+def raise_csv_field_limit():
+    """Protein metadata fields can exceed Python's default 131072-byte csv limit."""
+    limit = sys.maxsize
+    while True:
+        try:
+            csv.field_size_limit(limit)
+            return
+        except OverflowError:
+            limit = int(limit / 10)
+
+
+def _metadata_column(proteins_file):
+    """Index of the metadata column, read from the header alone."""
+    opener = gzip.open if str(proteins_file).endswith(".gz") else open
+    with opener(proteins_file, "rt", newline="") as handle:
+        header = next(csv.reader(handle))
+
+    return header.index("metadata")
+
+
+def iter_metadata(proteins_file, use_prefilter=True):
+    """Yield the parsed metadata of every row carrying an "m" annotation.
+
+    With use_prefilter, decompression and the discard of "m"-less rows are pushed into
+    `zcat | grep`, so only survivors reach json.loads. The "m" check is repeated here, so both
+    paths yield exactly the same rows.
+    """
+    raise_csv_field_limit()
+    column = _metadata_column(proteins_file)
+    prefiltered = use_prefilter and str(proteins_file).endswith(".gz")
+
+    if prefiltered:
+        # The raw CSV doubles the quotes inside the metadata field, hence '""m"":'.
+        zcat = subprocess.Popen(["zcat", str(proteins_file)], stdout=subprocess.PIPE)
+        grep = subprocess.Popen(["grep", "-F", '""m"":'], stdin=zcat.stdout,
+                                stdout=subprocess.PIPE, env={**os.environ, "LC_ALL": "C"})
+        zcat.stdout.close()
+        handle = io.TextIOWrapper(grep.stdout, newline="")
+    else:
+        opener = gzip.open if str(proteins_file).endswith(".gz") else open
+        handle = opener(proteins_file, "rt", newline="")
+
+    try:
+        reader = csv.reader(handle)
+        if not prefiltered:
+            next(reader, None)  # grep already dropped the header on the prefiltered path
+        for row in reader:
+            if len(row) <= column:
+                continue
+            metadata = json.loads(row[column] or "{}")
+            if metadata.get("m"):
+                yield metadata
+    finally:
+        handle.close()
+        if prefiltered:
+            zcat.wait()
+            grep.wait()
+            if grep.returncode not in (0, 1):  # 1 is grep's "no lines matched"
+                raise RuntimeError(f"prefilter failed with exit code {grep.returncode}")
+
+
+def count_architectures(metadata_rows, family_to_clan, clan_to_rep, pfam_mapping, base_url,
+                        overlap_fraction, log_every=1000000):
+    """Tally architecture keys per family. Every family hit on a row is credited exactly once."""
+    # ponytail: the whole tally (~35K families) lives in RAM for the pass. If it ever stops
+    # fitting, spill `family\tkey` lines to disk and finish with `sort | uniq -c`.
+    counters = defaultdict(Counter)
+    kept = 0
+
+    for kept, metadata in enumerate(metadata_rows, start=1):
+        chips = build_chips(metadata, family_to_clan, clan_to_rep, pfam_mapping, base_url,
+                            overlap_fraction)
+        key = sys.intern(architecture_key(chips))
+        for family_id in {hit[0] for hit in metadata["m"]}:
+            counters[family_id][key] += 1
+
+        if kept % log_every == 0:
+            log.info(f"Counted {kept} annotated sequences across {len(counters)} families")
+
+    log.info(f"Counted {kept} annotated sequences across {len(counters)} families")
+
+    return counters
+
+
+def resolve_chip(chip_id, clan_to_rep, pfam_mapping, base_url):
+    """Turn a chip id back into the viewer's domain object."""
+    if chip_id in clan_to_rep:
+        name = f"MGnifam clan {chip_id.split('_', 1)[1]}"
+        link = details_link(clan_to_rep[chip_id], base_url)
+    elif chip_id.isdigit():
+        name = f"MGnifam{chip_id}"
+        link = details_link(chip_id, base_url)
+    else:
+        name = pfam_mapping.get(chip_id, chip_id)
+        link = f"https://www.ebi.ac.uk/interpro/entry/pfam/{chip_id}"
+
+    color = string_to_hex_color(name)
+
+    return {"id": chip_id, "color": color, "link": link, "name": name,
+            "font_color": decide_font_color(color)}
+
+
+def architecture_json(counter, top, clan_to_rep, pfam_mapping, base_url):
+    containers = []
+
+    for key, count in Counter(counter).most_common(top):
+        domains = [resolve_chip(chip_id, clan_to_rep, pfam_mapping, base_url)
+                   for chip_id in key.split("\t") if chip_id]
+        containers.append({"architecture_text": str(count), "domains": domains})
+
+    return {"architecture_containers": containers}
+
+
+def _family_sort_key(family_id):
+    return (0, int(family_id), "") if family_id.isdigit() else (1, 0, family_id)
+
+
+def write_outputs(counters, expected_families, output_dir, top, clan_to_rep, pfam_mapping,
+                  base_url):
+    """Write one JSON per family and return the expected families that got no hits.
+
+    Families with no hits still get a valid empty file, so updating the database cannot fail
+    on a missing input.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for family_id, counter in counters.items():
+        payload = architecture_json(counter, top, clan_to_rep, pfam_mapping, base_url)
+        (output_dir / f"{family_id}.json").write_text(json.dumps(payload, indent=4))
+
+    missing = sorted(set(expected_families) - set(counters), key=_family_sort_key)
+    for family_id in missing:
+        (output_dir / f"{family_id}.json").write_text(
+            json.dumps({"architecture_containers": []}, indent=4))
+
+    (output_dir / "missing_families.txt").write_text(
+        "".join(f"{family_id}\n" for family_id in missing))
+
+    log.info(f"Wrote {len(counters)} families with hits to {output_dir}")
+    if missing:
+        log.warning(f"{len(missing)} expected families had no annotated sequence; wrote empty "
+                    f"architectures and listed them in {output_dir / 'missing_families.txt'}")
+
+    unexpected = sorted(set(counters) - set(expected_families), key=_family_sort_key)
+    if unexpected:
+        log.warning(f"{len(unexpected)} families were annotated but absent from the clan file, "
+                    f"e.g. {unexpected[:5]}")
+
+    return missing
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Build per-family domain architecture JSONs from the MGnify re-annotation CSV.")
+    parser.add_argument("--proteins", required=True,
+                        help="Re-annotated proteins CSV(.gz) with mgyp and metadata columns")
+    parser.add_argument("--clan-membership", required=True,
+                        help="clan_membership.csv with Cluster Id, Family Rep Id and Family Ids")
+    parser.add_argument("--pfam-mapping", required=True,
+                        help="TSV mapping Pfam accessions to names")
+    parser.add_argument("--output-dir", required=True,
+                        help="Directory for the per-family JSONs")
+    parser.add_argument("--overlap-fraction", type=float, default=0.5,
+                        help="Same-clan hits merge when they share more than this fraction of the "
+                             "shorter hit")
+    parser.add_argument("--top", type=int, default=15,
+                        help="Number of architectures kept per family")
+    parser.add_argument("--base-url", default="http://mgnifams-demo.mgnify.org/details/",
+                        help="Base URL for MGnifam detail pages")
+    parser.add_argument("--log-every", type=int, default=1000000,
+                        help="Log progress every N annotated sequences")
+    parser.add_argument("--no-prefilter", action="store_true",
+                        help="Skip the zcat|grep prefilter and read the CSV directly")
+
+    args = parser.parse_args()
+    started = time.time()
+    log.info("Starting parse_domain_architectures")
+
+    family_to_clan, clan_to_rep = load_clan_membership(args.clan_membership)
+    pfam_mapping = load_pfam_mapping(args.pfam_mapping)
+
+    counters = count_architectures(
+        iter_metadata(args.proteins, use_prefilter=not args.no_prefilter),
+        family_to_clan, clan_to_rep, pfam_mapping, args.base_url, args.overlap_fraction,
+        args.log_every)
+
+    write_outputs(counters, set(family_to_clan), args.output_dir, args.top, clan_to_rep,
+                  pfam_mapping, args.base_url)
+
+    log.info(f"parse_domain_architectures complete in {time.time() - started:.1f}s")
+
+
+if __name__ == "__main__":
+    main()

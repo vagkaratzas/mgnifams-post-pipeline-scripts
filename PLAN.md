@@ -49,17 +49,17 @@ python -m pytest tests/test_parse_domain_architectures.py -q
 
 ## Phase 3 — streaming and counting
 
-- [ ] rows without `"m"` are skipped
-- [ ] a family is credited for a sequence even when its own hit merged into a clan chip
-- [ ] every distinct family id on a row is credited exactly once, even when it hits twice
-- [ ] `--no-prefilter` and the `zcat | grep` path produce identical output
+- [x] rows without `"m"` are skipped
+- [x] a family is credited for a sequence even when its own hit merged into a clan chip
+- [x] every distinct family id on a row is credited exactly once, even when it hits twice
+- [x] `--no-prefilter` and the `zcat | grep` path produce identical output
 
 ## Phase 4 — output and validation
 
-- [ ] `write_family_json` emits the exact schema, top-N, count-descending
-- [ ] a family in the clan file with zero hits gets `{"architecture_containers": []}`
-- [ ] that family is listed in `missing_families.txt` and a WARNING is logged
-- [ ] end-to-end CLI run on the dummy gz produces the expected JSON set
+- [x] `write_family_json` emits the exact schema, top-N, count-descending
+- [x] a family in the clan file with zero hits gets `{"architecture_containers": []}`
+- [x] that family is listed in `missing_families.txt` and a WARNING is logged
+- [x] end-to-end CLI run on the dummy gz produces the expected JSON set
 
 ## Phase 5 — `bin/update_domain_blobs.py`
 
