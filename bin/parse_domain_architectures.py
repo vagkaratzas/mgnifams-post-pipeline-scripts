@@ -54,17 +54,31 @@ def load_clan_membership(clan_membership_file):
 
 
 def load_pfam_mapping(pfam_mapping_file):
-    """Return accession -> human readable name."""
+    """Return accession -> human readable name.
+
+    Accepts the two-column `accession<TAB>name` form and the wider
+    `pfam_id<TAB>name<TAB>clan_id` form; anything past the clan is ignored, as is a header row.
+    A two-column file yields an empty clan map, which disables Pfam clan collapsing.
+    """
     pfam_mapping = {}
+    pfam_to_clan = {}
+    skipped = 0
 
     with open(pfam_mapping_file) as handle:
         for line in handle:
-            accession, name = line.rstrip("\n").split("\t", 1)
-            pfam_mapping[accession] = name
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) < 2 or not fields[0].startswith("PF"):
+                skipped += 1
+                continue
+            pfam_mapping[fields[0]] = fields[1]
+            if len(fields) > 2 and fields[2].strip():
+                pfam_to_clan[fields[0]] = fields[2].strip()
 
-    log.info(f"Loaded {len(pfam_mapping)} pfam entries")
+    log.info(f"Loaded {len(pfam_mapping)} pfam entries, {len(pfam_to_clan)} of them in a clan")
+    if skipped:
+        log.info(f"Skipped {skipped} non-accession lines in {pfam_mapping_file}")
 
-    return pfam_mapping
+    return pfam_mapping, pfam_to_clan
 
 
 def overlaps(a, b, overlap_fraction):
@@ -78,18 +92,19 @@ def overlaps(a, b, overlap_fraction):
     return shared > overlap_fraction * shorter
 
 
-def cluster_hits(hits, family_to_clan, overlap_fraction):
-    """Single-linkage cluster (family_id, start, end) hits, merging only within a clan.
+def cluster_hits(hits, id_to_clan, overlap_fraction, warn_unknown=True):
+    """Single-linkage cluster (id, start, end) hits, merging only within a clan.
 
-    A family missing from the clan file gets a private pseudo-clan, so it can only ever merge
-    with itself. Returns groups ordered by span.
+    An id missing from the clan map gets a private pseudo-clan, so it can only ever merge with
+    itself. Returns groups ordered by span. warn_unknown is off for Pfams, where being unclanned
+    is normal, and on for MGnifam families, where it means the clan file is stale.
     """
     by_clan = {}
     for hit in hits:
-        clan = family_to_clan.get(hit[0])
+        clan = id_to_clan.get(hit[0])
         if clan is None:
             clan = f"__unknown__{hit[0]}"
-            if hit[0] not in _UNKNOWN_FAMILIES:
+            if warn_unknown and hit[0] not in _UNKNOWN_FAMILIES:
                 _UNKNOWN_FAMILIES.add(hit[0])
                 log.warning(f"Family {hit[0]} is absent from the clan file, never merging it")
         by_clan.setdefault(clan, []).append(hit)
@@ -121,6 +136,14 @@ def details_link(family_id, base_url):
     return f"{base_url.rstrip('/')}/{construct_name(family_id)}"
 
 
+def pfam_entry_link(accession):
+    return f"https://www.ebi.ac.uk/interpro/entry/pfam/{accession}"
+
+
+def pfam_set_link(clan):
+    return f"https://www.ebi.ac.uk/interpro/set/pfam/{clan}/"
+
+
 def mgnifam_chip(group, family_to_clan, clan_to_rep, base_url):
     """One merged group of MGnifam hits becomes one chip, clan-labelled only if it spans >1 family."""
     start = min(hit[1] for hit in group)
@@ -137,16 +160,33 @@ def mgnifam_chip(group, family_to_clan, clan_to_rep, base_url):
     return Chip(start, end, family_id, f"MGnifam{family_id}", details_link(family_id, base_url))
 
 
-def pfam_chip(hit, pfam_mapping):
-    """One "p" entry becomes one chip, positioned by its alignment (not HMM) coordinates."""
-    accession = hit[0]
+def pfam_chip(group, pfam_to_clan, pfam_mapping):
+    """One merged group of Pfam hits becomes one chip, clan-labelled only if it spans >1 family."""
+    start = min(hit[1] for hit in group)
+    end = max(hit[2] for hit in group)
+    accessions = {hit[0] for hit in group}
 
-    return Chip(hit[5], hit[6], accession, pfam_mapping.get(accession, accession), None)
+    if len(accessions) > 1:
+        clan = pfam_to_clan[next(iter(accessions))]
+        return Chip(start, end, clan, f"Pfam clan {clan}", pfam_set_link(clan))
+
+    accession = accessions.pop()
+
+    return Chip(start, end, accession, pfam_mapping.get(accession, accession),
+                pfam_entry_link(accession))
 
 
-def build_chips(metadata, family_to_clan, clan_to_rep, pfam_mapping, base_url, overlap_fraction):
-    """Every chip on one sequence, ordered by (ali_from, ali_to, id)."""
-    chips = [pfam_chip(hit, pfam_mapping) for hit in metadata.get("p") or []]
+def build_chips(metadata, family_to_clan, clan_to_rep, pfam_mapping, pfam_to_clan, base_url,
+                overlap_fraction):
+    """Every chip on one sequence, ordered by (ali_from, ali_to, id).
+
+    Pfams and MGnifams are collapsed by their own clans independently; the two never merge.
+    """
+    chips = []
+
+    pfam_hits = [(hit[0], hit[5], hit[6]) for hit in metadata.get("p") or []]
+    for group in cluster_hits(pfam_hits, pfam_to_clan, overlap_fraction, warn_unknown=False):
+        chips.append(pfam_chip(group, pfam_to_clan, pfam_mapping))
 
     hits = [(hit[0], hit[3], hit[4]) for hit in metadata.get("m") or []]
     for group in cluster_hits(hits, family_to_clan, overlap_fraction):
@@ -257,8 +297,8 @@ def iter_metadata(proteins_file, use_prefilter=True):
                 raise RuntimeError(f"prefilter failed with exit code {grep.returncode}")
 
 
-def count_architectures(metadata_rows, family_to_clan, clan_to_rep, pfam_mapping, base_url,
-                        overlap_fraction, log_every=1000000):
+def count_architectures(metadata_rows, family_to_clan, clan_to_rep, pfam_mapping, pfam_to_clan,
+                        base_url, overlap_fraction, log_every=1000000):
     """Tally architecture keys per family. Every family hit on a row is credited exactly once."""
     # ponytail: the whole tally (~35K families) lives in RAM for the pass. If it ever stops
     # fitting, spill `family\tkey` lines to disk and finish with `sort | uniq -c`.
@@ -266,8 +306,8 @@ def count_architectures(metadata_rows, family_to_clan, clan_to_rep, pfam_mapping
     kept = 0
 
     for kept, metadata in enumerate(metadata_rows, start=1):
-        chips = build_chips(metadata, family_to_clan, clan_to_rep, pfam_mapping, base_url,
-                            overlap_fraction)
+        chips = build_chips(metadata, family_to_clan, clan_to_rep, pfam_mapping, pfam_to_clan,
+                            base_url, overlap_fraction)
         key = sys.intern(architecture_key(chips))
         for family_id in {hit[0] for hit in metadata["m"]}:
             counters[family_id][key] += 1
@@ -288,9 +328,14 @@ def resolve_chip(chip_id, clan_to_rep, pfam_mapping, base_url):
     elif chip_id.isdigit():
         name = f"MGnifam{chip_id}"
         link = details_link(chip_id, base_url)
+    elif chip_id.startswith("CL"):
+        # Namespaces cannot collide: Pfam clans are CL####, Pfam families PF#####, MGnifam
+        # families are digits, and MGnifam clans are an exact clan_to_rep hit above.
+        name = f"Pfam clan {chip_id}"
+        link = pfam_set_link(chip_id)
     else:
         name = pfam_mapping.get(chip_id, chip_id)
-        link = f"https://www.ebi.ac.uk/interpro/entry/pfam/{chip_id}"
+        link = pfam_entry_link(chip_id)
 
     color = string_to_hex_color(name)
 
@@ -376,12 +421,12 @@ def main():
     log.info("Starting parse_domain_architectures")
 
     family_to_clan, clan_to_rep = load_clan_membership(args.clan_membership)
-    pfam_mapping = load_pfam_mapping(args.pfam_mapping)
+    pfam_mapping, pfam_to_clan = load_pfam_mapping(args.pfam_mapping)
 
     counters = count_architectures(
         iter_metadata(args.proteins, use_prefilter=not args.no_prefilter),
-        family_to_clan, clan_to_rep, pfam_mapping, args.base_url, args.overlap_fraction,
-        args.log_every)
+        family_to_clan, clan_to_rep, pfam_mapping, pfam_to_clan, args.base_url,
+        args.overlap_fraction, args.log_every)
 
     write_outputs(counters, set(family_to_clan), args.output_dir, args.top, clan_to_rep,
                   pfam_mapping, args.base_url)

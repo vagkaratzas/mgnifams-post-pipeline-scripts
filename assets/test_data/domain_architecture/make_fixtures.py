@@ -21,12 +21,17 @@ CLANS = [
     ("SF_2", "200", "3", "200;201;202"),
     ("SF_3", "300", "1", "300"),
     ("SF_4", "400", "1", "400"),
+    ("SF_5", "500", "1", "500"),
 ]
 
-# PF09999 is deliberately absent so the mapping fallback is exercised.
+# Three columns: accession, name, clan. PF00003 and PF00004 share CL0003 so they can merge;
+# PF00005 has a blank clan so it never can; PF09999 is absent entirely, exercising the fallback.
 PFAMS = [
-    ("PF00001", "Alpha domain"),
-    ("PF00002", "Beta domain"),
+    ("PF00001", "Alpha domain", "CL0001"),
+    ("PF00002", "Beta domain", "CL0002"),
+    ("PF00003", "Gamma domain", "CL0003"),
+    ("PF00004", "Delta domain", "CL0003"),
+    ("PF00005", "Epsilon domain", ""),
 ]
 
 SEQ = "MKVLATTVGSKQWDEHRPLY"
@@ -72,6 +77,33 @@ ROWS = [
     # same family twice on disjoint regions -> two chips, but credited once
     (12, {"m": [["300", 1e-05, 50.0, 10, 100],
                 ["300", 1e-04, 45.0, 200, 290]]}, "300\t300"),
+
+    # Pfam clan collapsing. All of these sit on family 500 alone, so every other family's JSON
+    # stays byte-identical to the pre-clan output.
+    # two same-clan Pfams overlapping 48/52 -> one clan chip
+    (13, {"p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52],
+                ["PF00004", 1e-04, 45.0, 1, 60, 5, 82]],
+          "m": [["500", 1e-05, 50.0, 300, 380]]}, "CL0003\t500"),
+    # two different-clan Pfams on the same region -> never merged
+    (14, {"p": [["PF00001", 1e-05, 50.0, 1, 60, 1, 52],
+                ["PF00003", 1e-04, 45.0, 1, 60, 1, 52]],
+          "m": [["500", 1e-05, 50.0, 300, 380]]}, "PF00001\tPF00003\t500"),
+    # two same-clan Pfams on disjoint regions -> two chips, repeat preserved
+    (15, {"p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52],
+                ["PF00004", 1e-04, 45.0, 1, 60, 200, 260]],
+          "m": [["500", 1e-05, 50.0, 300, 380]]}, "PF00003\tPF00004\t500"),
+    # a blank-clan Pfam overlapping a clanned one -> never merged, and no warning
+    (16, {"p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 52],
+                ["PF00005", 1e-04, 45.0, 1, 60, 1, 52]],
+          "m": [["500", 1e-05, 50.0, 300, 380]]}, "PF00003\tPF00005\t500"),
+    # exactly 50% Pfam overlap -> NOT merged
+    (17, {"p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 100],
+                ["PF00004", 1e-04, 45.0, 1, 60, 51, 150]],
+          "m": [["500", 1e-05, 50.0, 300, 380]]}, "PF00003\tPF00004\t500"),
+    # 51% Pfam overlap -> merged
+    (18, {"p": [["PF00003", 1e-05, 50.0, 1, 60, 1, 100],
+                ["PF00004", 1e-04, 45.0, 1, 60, 50, 149]],
+          "m": [["500", 1e-05, 50.0, 300, 380]]}, "CL0003\t500"),
 ]
 
 
@@ -82,8 +114,9 @@ def main():
         writer.writerows(CLANS)
 
     with (HERE / "pfam_mapping_dummy.tsv").open("w") as handle:
-        for accession, name in PFAMS:
-            handle.write(f"{accession}\t{name}\n")
+        handle.write("pfam_id\tname\tclan_id\n")
+        for accession, name, clan in PFAMS:
+            handle.write(f"{accession}\t{name}\t{clan}\n")
 
     with gzip.open(HERE / "proteins_dummy.csv.gz", "wt", newline="") as handle:
         writer = csv.writer(handle)
