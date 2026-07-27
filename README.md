@@ -486,8 +486,46 @@ If similarity >= 0.95, keep the bigger family. If same, keep family with smaller
 After removing redundant, filenames do not correspond to family ids inside the domain architecture.
 This script map it properly to the basename of the file.
 
+> **Do not run this on the output of `parse_domain_architectures.py`.** It rewrites every domain
+> whose name contains `MGnifam`, which would flatten clan chips (`MGnifam clan 233`) back into
+> single-family chips.
+
+## parse_domain_architectures.py
+Builds the per-family domain architecture JSONs consumed by the site's Domain architecture card,
+from the re-annotated proteins CSV (`metadata` column, `"p"` for Pfam and `"m"` for MGnifam hits).
+Pfam hits become one chip each, positioned by their alignment coordinates; MGnifam hits are
+collapsed by clan, so hits from the same clan that overlap by more than `--overlap-fraction` of the
+shorter hit render as a single `MGnifam clan <N>` chip linking to that clan's representative family.
+Chips are ordered by start position, then by length, then alphabetically. Behaviour is specified in
+[SPEC.md](SPEC.md).
+
+Every family in the clan file gets a JSON, including an empty one when it had no annotated
+sequence; those ids are also listed in `missing_families.txt` so nothing silently disappears.
+
+```bash
+python bin/parse_domain_architectures.py \
+  --proteins proteins_mgnifams.csv.gz \
+  --clan-membership assets/mgnifams_v2_results/generate_families/network/clan_membership.csv \
+  --pfam-mapping pfam_mapping.tsv \
+  --output-dir output/domain_results
+```
+
+Options: `--overlap-fraction` (default `0.5`), `--top` (default `15`), `--base-url`, `--log-every`,
+and `--no-prefilter` to skip the `zcat | grep` prefilter that discards rows without an `"m"`
+annotation before they are parsed.
+
 ## update_domain_blobs.py
-From a domain_results folder, update blobs of sqlite.
+From a `parse_domain_architectures.py` output folder, load each `<family_id>.json` into the matching
+`mgnifam` row's `domain_blob`. Reports rows that had no JSON file and JSON files that had no row.
+
+```bash
+python bin/update_domain_blobs.py \
+  --db mgnifams.sqlite3 \
+  --json-dir output/domain_results
+```
+
+Options: `--table` (default `mgnifam`) and `--column` (default `domain_blob`), both validated
+against the schema before use.
 
 ## update_stars_sqlite.py
 Checks if column exists. Create if not. Then append data.
