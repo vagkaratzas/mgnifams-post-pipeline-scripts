@@ -1,2 +1,6 @@
-PF00001	Alpha domain
-PF00002	Beta domain
+pfam_id	name	clan_id
+PF00001	Alpha domain	CL0001
+PF00002	Beta domain	CL0002
+PF00003	Gamma domain	CL0003
+PF00004	Delta domain	CL0003
+PF00005	Epsilon domain	
