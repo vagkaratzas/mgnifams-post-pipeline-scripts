@@ -70,11 +70,22 @@ python -m pytest tests/test_parse_domain_architectures.py -q
 
 ## Phase 6 — wrap-up
 
-- [ ] README sections for both scripts, in the existing style, under stage 5 — short description
+- [x] README sections for both scripts, in the existing style, under stage 5 — short description
       plus a CLI call each; include the "do not run `assign_correct_domain_ids.py` on these JSONs"
       warning
-- [ ] full `python -m pytest -q` green
-- [ ] every box above ticked
+- [x] both new suites green (33 tests), no regressions: `pytest tests/` goes 86 → 119 passed
+- [x] every box above ticked
+
+### Pre-existing failures, not introduced here
+
+`python -m pytest -q` cannot run from the repo root: `tests/test_append_mgnifams_annot.py` and
+`pipelines/annotation_percentages/bin/tests/test_append_mgnifams_annot.py` share a basename, so
+collection aborts. Use `python -m pytest tests/ -q --ignore=pipelines`.
+
+That run has 8 failures, all present at base commit `aaceef4` and all in files this work never
+touched: `test_append_mgnifams_annot.py` (2), `test_calculate_annotation_stats.py` (2),
+`test_compare_annotation_stats.py` (2), `test_extract_fasta_from_proteins_csv.py` (1),
+`test_plot_mgnifam_metadata_distributions.py` (1). Left alone; out of scope.
 
 ## Verification
 
