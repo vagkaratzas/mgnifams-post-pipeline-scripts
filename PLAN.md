@@ -63,10 +63,10 @@ python -m pytest tests/test_parse_domain_architectures.py -q
 
 ## Phase 5 — `bin/update_domain_blobs.py`
 
-- [ ] updates `domain_blob` for every db id with a matching JSON
-- [ ] leaves rows with no JSON untouched and reports the count
-- [ ] reports JSON files with no matching db row
-- [ ] rejects a `--column` absent from `PRAGMA table_info` instead of interpolating it
+- [x] updates `domain_blob` for every db id with a matching JSON
+- [x] leaves rows with no JSON untouched and reports the count
+- [x] reports JSON files with no matching db row
+- [x] rejects a `--column` absent from `PRAGMA table_info` instead of interpolating it
 
 ## Phase 6 — wrap-up
 

@@ -1,75 +1,93 @@
 #!/usr/bin/env python3
 
+"""Load per-family domain architecture JSONs into the mgnifam SQLite blob column.
+
+Input is the output directory of bin/parse_domain_architectures.py: one <family_id>.json per
+family, including empty ones for families that got no annotated sequence.
+"""
+
+import argparse
+import logging
 import sqlite3
-import sys
-import os
+import time
+from pathlib import Path
 
-def test_connection(conn): 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+log = logging.getLogger(__name__)
+
+
+def _check_identifiers(connection, table, column):
+    """Table and column are interpolated into SQL, so accept only names the schema really has."""
+    tables = {row[0] for row in connection.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table'")}
+    if table not in tables:
+        raise ValueError(f"No table named {table!r} in this database")
+
+    columns = {row[1] for row in connection.execute(f"PRAGMA table_info({table})")}
+    if column not in columns:
+        raise ValueError(f"No column named {column!r} in table {table!r}")
+
+
+def update_blobs(db, json_dir, table="mgnifam", column="domain_blob"):
+    """Write <json_dir>/<id>.json into <column> for every row of <table>.
+
+    Returns (rows updated, ids with no JSON file, JSON files with no row).
+    """
+    json_dir = Path(json_dir)
+    connection = sqlite3.connect(db)
+
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM mgnifam")
-        row_count = cursor.fetchone()[0]
-        print("Connection successful! Number of rows in the table: ", row_count)
-    except sqlite3.Error as e:
-        print("Connection failed:", e)
+        _check_identifiers(connection, table, column)
 
-def construct_file_path(base_dir, file_column):
-    directory = "post-processing/domain_results"
-    return os.path.join(base_dir, directory, file_column)
+        row_ids = [str(row[0]) for row in connection.execute(f"SELECT id FROM {table}")]
+        updates = []
+        missing = []
 
-def read_file(file_path):
-    try:
-        with open(file_path, 'rb') as file:
-            return file.read()
-    except (OSError, IOError) as e:
-        print(f"Error reading file {file_path}: {e}")
-        return None
+        for row_id in row_ids:
+            path = json_dir / f"{row_id}.json"
+            if path.is_file():
+                updates.append((sqlite3.Binary(path.read_bytes()), row_id))
+            else:
+                missing.append(row_id)
 
-def update_blob_column(db_path, blob_data, row_id):
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        query = "UPDATE mgnifam SET domain_architecture_blob = ? WHERE id = ?"
-        cursor.execute(query, (sqlite3.Binary(blob_data), row_id))
-        conn.commit()
-        conn.close()
-        print(f"Updated domain_architecture_blob for row {row_id}")
-    except sqlite3.Error as e:
-        print(f"Failed to update domain_architecture_blob for row {row_id}: {e}")
+        connection.executemany(f"UPDATE {table} SET {column} = ? WHERE id = ?", updates)
+        connection.commit()
+    finally:
+        connection.close()
 
-def process_row(db_path, base_dir, row):
-    row_id = row[0]
-    file_column = row[1]
+    on_disk = {path.stem for path in json_dir.glob("*.json")}
+    orphans = sorted(on_disk - set(row_ids), key=lambda i: int(i) if i.isdigit() else 0)
 
-    if file_column is not None: 
-        file_path = construct_file_path(base_dir, file_column)
-        blob_data = read_file(file_path)
-        
-        if blob_data:
-            update_blob_column(db_path, blob_data, row_id)
-        else:
-            print(f"Skipping update for row {row_id} due to read error")
+    log.info(f"Updated {column} for {len(updates)} of {len(row_ids)} rows in {table}")
+    if missing:
+        log.warning(f"{len(missing)} rows had no JSON file, e.g. {missing[:5]}")
+    if orphans:
+        log.warning(f"{len(orphans)} JSON files had no matching row, e.g. {orphans[:5]}")
 
-def import_files(db_path, base_dir):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, domain_architecture_file FROM mgnifam")
-    rows = cursor.fetchall()
-    conn.close()
+    return len(updates), missing, orphans
 
-    for row in rows:
-        process_row(db_path, base_dir, row)
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python3 append_domain_blobs_sqlite.py <db.sqlite3> <output_dir>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Load domain architecture JSONs into the mgnifam SQLite blob column.")
+    parser.add_argument("--db", required=True, help="Path to the SQLite database")
+    parser.add_argument("--json-dir", required=True,
+                        help="Directory of <family_id>.json domain architectures")
+    parser.add_argument("--table", default="mgnifam", help="Table to update")
+    parser.add_argument("--column", default="domain_blob", help="Blob column to write")
 
-    db_path = sys.argv[1]
-    base_dir = sys.argv[2]
+    args = parser.parse_args()
+    started = time.time()
+    log.info("Starting update_domain_blobs")
 
-    # Import domain files
-    import_files(db_path, base_dir)
-    
+    update_blobs(args.db, args.json_dir, args.table, args.column)
+
+    log.info(f"update_domain_blobs complete in {time.time() - started:.1f}s")
+
+
 if __name__ == "__main__":
     main()
