@@ -25,27 +25,27 @@ python -m pytest tests/test_parse_domain_architectures.py -q
 
 ## Phase 1 — pure functions (`bin/parse_domain_architectures.py`)
 
-- [ ] `load_clan_membership` returns family → clan and clan → rep
-- [ ] `overlaps` is True at 51%, **False at exactly 50%**
-- [ ] `cluster_hits` merges three same-clan same-region hits into one group
-- [ ] `cluster_hits` keeps same-clan disjoint hits as two groups
-- [ ] `cluster_hits` never merges different-clan hits, however much they overlap
-- [ ] `cluster_hits` chains A–B and B–C into one group when A and C do not overlap (single linkage)
-- [ ] `mgnifam_chip` with >1 distinct family → `SF_233` / `MGnifam clan 233` / rep link
-- [ ] `mgnifam_chip` with 1 distinct family → `470` / `MGnifam470` / own link
-- [ ] `pfam_chip` falls back to the raw accession when it is missing from the mapping (bug 6)
-- [ ] `string_to_hex_color` parity with the old output: `"ATP synthase alpha/beta family,
+- [x] `load_clan_membership` returns family → clan and clan → rep
+- [x] `overlaps` is True at 51%, **False at exactly 50%**
+- [x] `cluster_hits` merges three same-clan same-region hits into one group
+- [x] `cluster_hits` keeps same-clan disjoint hits as two groups
+- [x] `cluster_hits` never merges different-clan hits, however much they overlap
+- [x] `cluster_hits` chains A–B and B–C into one group when A and C do not overlap (single linkage)
+- [x] `mgnifam_chip` with >1 distinct family → `SF_233` / `MGnifam clan 233` / rep link
+- [x] `mgnifam_chip` with 1 distinct family → `470` / `MGnifam470` / own link
+- [x] `pfam_chip` falls back to the raw accession when it is missing from the mapping (bug 6)
+- [x] `string_to_hex_color` parity with the old output: `"ATP synthase alpha/beta family,
       nucleotide-binding domain"` → `#8b5115`, asserted against the existing asset JSON
-- [ ] `decide_font_color` returns `white` below the 0.2 luminosity cut and `black` above it
+- [x] `decide_font_color` returns `white` below the 0.2 luminosity cut and `black` above it
 
 ## Phase 2 — per-row assembly
 
-- [ ] `build_chips` puts a Pfam before the MGnifam when its `ali_from` is smaller — **bug 1
+- [x] `build_chips` puts a Pfam before the MGnifam when its `ali_from` is smaller — **bug 1
       regression; uses `p[5]`, not `p[3]`**
-- [ ] `build_chips` orders equal-start chips shortest-first
-- [ ] `build_chips` orders equal-start equal-length chips alphabetically by id
-- [ ] `architecture_key` preserves repeats: the same Pfam twice → two entries
-- [ ] a row at 50% overlap and a row at 51% overlap yield two different keys
+- [x] `build_chips` orders equal-start chips shortest-first
+- [x] `build_chips` orders equal-start equal-length chips alphabetically by id
+- [x] `architecture_key` preserves repeats: the same Pfam twice → two entries
+- [x] a row at 50% overlap and a row at 51% overlap yield two different keys
 
 ## Phase 3 — streaming and counting
 
