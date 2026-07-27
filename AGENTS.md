@@ -41,7 +41,6 @@ Scripts are meant to be run in this logical order:
    - `calculate_annotation_stats.py` and `compare_annotation_stats.py`
 
 3. **Redundancy removal** — After filtering redundant families:
-   - `assign_correct_domain_ids.py` (remaps MGnifam IDs in domain JSON files)
    - `remove_ids_from_csv.py`, `map_ids.py`, and related `map_*` / `remove_*` scripts
 
 4. **Annotation** — Self-annotation with MGnifam HMMs:
@@ -71,6 +70,5 @@ Scripts are meant to be run in this logical order:
 
 - **region** fields use `start-end` string format (e.g., `"1-150"`)
 - **metadata** in CSV files is stored as JSON strings in a `metadata` column; MGnifam annotations are stored under the `"m"` key as `[family_id, domain_i_evalue, domain_score, ali_from, ali_to]`
-- **Domain architecture files** are JSON; after redundancy removal, internal MGnifam ID references must be updated via `assign_correct_domain_ids.py`
 - **S4Pred output** (3-line format: Conf/Pred/AA) is parsed by `parse_s4pred_to_feature_viewer.py` into FeatureViewer-compatible JSON
 - Similarity files use CSV with `fam1,fam2,family_jaccard,aa_jaccard` columns; redundancy threshold is `>= 0.95`
