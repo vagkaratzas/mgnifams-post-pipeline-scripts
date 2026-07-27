@@ -13,11 +13,11 @@ python -m pytest tests/test_parse_domain_architectures.py -q
 ## Phase 0 — docs and fixtures
 
 - [x] Write `SPEC.md` and `PLAN.md` at the repo root
-- [ ] `assets/test_data/domain_architecture/clan_membership_dummy.csv` — a multi-family clan, a
+- [x] `assets/test_data/domain_architecture/clan_membership_dummy.csv` — a multi-family clan, a
       second clan, a singleton clan, and one family that gets zero hits
-- [ ] `assets/test_data/domain_architecture/pfam_mapping_dummy.tsv` — deliberately omitting one
+- [x] `assets/test_data/domain_architecture/pfam_mapping_dummy.tsv` — deliberately omitting one
       accession used by the dummy proteins
-- [ ] `assets/test_data/domain_architecture/proteins_dummy.csv.gz` — covering: a row with no `"m"` ·
+- [x] `assets/test_data/domain_architecture/proteins_dummy.csv.gz` — covering: a row with no `"m"` ·
       three same-clan same-region hits · two same-clan disjoint hits · two different-clan
       overlapping hits · a Pfam whose `ali_from` precedes the MGnifam while its `hmm_from` is 1 ·
       a repeated Pfam · an accession missing from the mapping · a 50%-vs-51% overlap pair ·
