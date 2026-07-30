@@ -86,11 +86,14 @@ Written to `--outdir` (default `output/synteny/`), prefixed by `--out-prefix`:
 - `synteny_anchors.tsv` — one row per anchor occurrence: contig, window status, partners with offsets
 - `synteny_maps.txt` — ASCII gene map of each anchor-bearing contig
 - `synteny_report.txt` — the printed summary
+- `synteny_contigs.txt` — the contigs found by step 1, written as soon as step 1 finishes so a
+  later failure doesn't cost the scan again; feed it straight back as `--contigs`
 
 ### `--contigs`: skip the protein → contig scan
 Takes a file of `contig_id`s already known to carry the family and skips step 1, a full
-`protein_id` scan of a ~6-billion-row parquet. Anchors are recovered from step 2 instead, so
-results are identical. The metadata is occurrence-level — one `protein_id` can sit on hundreds
+`protein_id` scan of a ~6-billion-row parquet — typically the slowest step of the run, which is
+why every run caches its result to `<prefix>_contigs.txt`. Anchors are recovered from step 2
+instead, so results are identical. The metadata is occurrence-level — one `protein_id` can sit on hundreds
 of contigs — so this file is usually far longer than the ids file, and your anchor count will
 far exceed your input count. That is also why independence is measured in `cluster_rep`s.
 

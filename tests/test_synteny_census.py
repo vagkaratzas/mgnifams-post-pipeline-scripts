@@ -166,6 +166,22 @@ def test_run_attaches_pfams_despite_float_columns(tmp_path):
     assert (pdf["type"] == "pfam").sum() >= 1
 
 
+def test_run_accepts_zero_padded_mgyp_ids(tmp_path):
+    """Regression: real MGYP ids are zero-padded ('MGYP000000000100').
+
+    Stripping the prefix used to leave '000000000100', which SQL cast fine but never
+    string-matched the '100' coming back out of the parquet, so every anchor was lost:
+    'ERROR: none of the input protein_ids are on the given contigs.'
+    """
+    argv, _ = _store(tmp_path)
+    ids_p = Path(argv[0])
+    ids_p.write_text("MGYP000000000100/1-176\nMGYP000000000200\n"
+                     "MGYP000000000300\nMGYP000000000400\n")
+    pdf, adf = M.run(M.parse_args(argv))
+    assert len(adf) == 4                               # all four anchors found
+    assert "PF01183" in pdf.set_index("partner").index
+
+
 def test_run_signed_offsets_and_conservation(tmp_path):
     argv, _ = _store(tmp_path)
     pdf, adf = M.run(M.parse_args(argv))
@@ -187,6 +203,16 @@ def test_run_contigs_flag_matches_full_run(tmp_path):
     argv, contigs_p = _store(tmp_path)
     pdf, _ = M.run(M.parse_args(argv))
     pdf2, _ = M.run(M.parse_args(argv + ["--contigs", contigs_p]))
+    assert pdf2.equals(pdf)
+
+
+def test_run_caches_contigs_for_reuse(tmp_path):
+    """Step 1 is the slow scan; its contigs must land on disk and feed --contigs."""
+    argv, _ = _store(tmp_path)
+    pdf, _ = M.run(M.parse_args(argv))
+    cache = tmp_path / "out" / "synteny_contigs.txt"
+    assert cache.read_text().split() == ["1", "2", "3", "4"]
+    pdf2, _ = M.run(M.parse_args(argv + ["--contigs", str(cache)]))
     assert pdf2.equals(pdf)
 
 
@@ -315,8 +341,17 @@ def test_sanitise_ids_int_column_drops_nonnumeric(caplog):
     assert any("non-numeric" in r.message for r in caplog.records)
 
 
+def test_sanitise_ids_int_column_strips_leading_zeros(caplog):
+    """MGYP ids are zero-padded; '000108638007' must become '108638007' (and dedup)."""
+    with caplog.at_level("WARNING"):
+        assert M.sanitise_ids_for_type(["000108638007", "108638007", "0012"], "BIGINT") \
+            == ["108638007", "12"]
+    assert not caplog.records                          # dedup is not a "dropped" warning
+
+
 def test_sanitise_ids_string_column_keeps_all():
     assert M.sanitise_ids_for_type(["abc", "12"], "VARCHAR") == ["abc", "12"]
+    assert M.sanitise_ids_for_type(["007"], "VARCHAR") == ["007"]   # no int coercion
 
 
 def test_window_uses_gene_span_when_no_contig_length():
