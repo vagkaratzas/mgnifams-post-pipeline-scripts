@@ -25,7 +25,7 @@ Pipeline
   1. InterPro  : Pfam list          -> domain architectures (ida_id)
   2. InterPro  : ida_id             -> UniProtKB accessions
   3. UniProt   : accession          -> ENA contig accession + protein_id
-  4. ENA       : contig accession   -> EMBL flatfile with CDS features
+  4. ENA/NCBI  : contig accession   -> flatfile with CDS features
   5. local     : extract +/-N gene neighbourhood around each anchor
   6. HMMER     : hmmsearch query HMM vs all neighbour proteins
   7. report    : joined TSVs + human-readable neighbourhood sketch
@@ -41,6 +41,10 @@ Usage
 Requirements
 ------------
   python >= 3.8, requests, biopython, and hmmsearch (HMMER3) on $PATH.
+
+  Contigs come from ENA where possible and NCBI otherwise (ENA cannot serve
+  individual WGS contigs -- see fetch_contig). Set NCBI_API_KEY and NCBI_EMAIL
+  to raise the NCBI rate limit on large runs; neither is required.
 """
 
 from __future__ import annotations
@@ -67,12 +71,32 @@ from Bio import SeqIO
 INTERPRO_API = "https://www.ebi.ac.uk/interpro/api"
 UNIPROT_API = "https://rest.uniprot.org"
 ENA_API = "https://www.ebi.ac.uk/ena/browser/api"
+NCBI_EFETCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 
 USER_AGENT = "ida2synteny/1.0 (https://github.com/; bioinformatics pipeline)"
 
 # WGS master records (contig number all zeros) carry no CDS features -- they
 # only describe the set. Fetching one is a common and silent failure mode.
 WGS_MASTER_RE = re.compile(r"^[A-Z]{4,6}\d{2}0{6,}$")
+
+
+def ncbi_params(contig_acc: str) -> dict:
+    """efetch parameters, honouring NCBI_API_KEY / NCBI_EMAIL if they are set.
+
+    Without a key NCBI allows 3 requests/s; the Fetcher's inter-request sleep
+    keeps us under that, and a key raises the ceiling for large runs.
+    """
+    params = {
+        "db": "nuccore",
+        "id": contig_acc,
+        "rettype": "gbwithparts",
+        "retmode": "text",
+        "tool": "ida2synteny",
+    }
+    for env, key in (("NCBI_API_KEY", "api_key"), ("NCBI_EMAIL", "email")):
+        if os.environ.get(env):
+            params[key] = os.environ[env]
+    return params
 
 
 # --------------------------------------------------------------------------
@@ -133,7 +157,9 @@ class NeighbourRow:
     anchor_start: int
     anchor_end: int
     anchor_strand: int
-    rank: int  # 0 = anchor, -1 = one gene upstream, etc.
+    # signed in the ANCHOR's reading direction, so -1 is upstream whether the
+    # anchor is on the + or the - strand -- matching synteny_census.py's `offset`
+    rank: int
     protein_id: str
     locus_tag: str
     product: str
@@ -141,6 +167,8 @@ class NeighbourRow:
     end: int
     strand: int
     length_aa: int
+    # gap to the previous gene in coordinate order -- NOT the gap to the anchor,
+    # which is what synteny_census.py's `gap_bp` column holds
     intergenic_gap_bp: Optional[int]
     same_strand_as_anchor: bool
     hmm_hit: bool
@@ -268,7 +296,13 @@ def find_architectures(fetcher: Fetcher, pfams: Sequence[str], ordered: bool,
         # Field naming has shifted across InterPro releases; accept either.
         ida_id = res.get("ida_id") or res.get("ida_accession") or ""
         ida_string = res.get("ida") or ""
-        count = res.get("counts") or res.get("unique_proteins") or 0
+        # `unique_proteins` on the IDA endpoint; `counts` elsewhere, where it is
+        # a nested dict rather than an int and would break the report formatting
+        count = res.get("unique_proteins")
+        if count is None:
+            raw_count = res.get("counts")
+            count = (raw_count.get("proteins", 0) if isinstance(raw_count, dict)
+                     else raw_count or 0)
         if not ida_id:
             continue
         n_domains = len([d for d in ida_string.split("-") if d]) if ida_string else 0
@@ -388,7 +422,15 @@ def proteome_to_assembly(fetcher: Fetcher, proteome_id: str) -> str:
 
 
 def fetch_contig(fetcher: Fetcher, contig_acc: str, contig_dir: Path) -> Optional[Path]:
-    """Download an EMBL flatfile for one contig, skipping WGS master records."""
+    """Download an annotated flatfile for one contig; ENA first, then NCBI.
+
+    ENA's browser API resolves a WGS *contig* accession to the WGS *master*
+    record, which only describes the set and carries no CDS features -- asking
+    for WPOC01000026 returns WPOC01000000. Adding a version suffix, ``lineage``,
+    ``annotationOnly`` or dbfetch all behave the same way, so for any WGS
+    assembly the ENA route yields nothing usable. NCBI serves the individual
+    contig with full annotation, so it is the fallback rather than the warning.
+    """
     if WGS_MASTER_RE.match(contig_acc):
         sys.stderr.write(
             f"  [warn] {contig_acc} looks like a WGS master record "
@@ -396,36 +438,46 @@ def fetch_contig(fetcher: Fetcher, contig_acc: str, contig_dir: Path) -> Optiona
         )
         return None
 
-    path = contig_dir / f"{contig_acc}.embl"
-    if path.exists() and path.stat().st_size > 0:
-        return path
+    for suffix in (".embl", ".gb"):
+        path = contig_dir / f"{contig_acc}{suffix}"
+        if path.exists() and path.stat().st_size > 0:
+            return path
 
     text = fetcher.get_text(f"{ENA_API}/embl/{contig_acc}",
                             cache_key=f"ena_embl_{contig_acc}")
-    if not text or "FT   CDS" not in text:
-        sys.stderr.write(f"  [warn] no CDS features retrieved for {contig_acc}\n")
-        return None
+    if text and "FT   CDS" in text:
+        path = contig_dir / f"{contig_acc}.embl"
+        path.write_text(text)
+        return path
 
-    path.write_text(text)
-    return path
+    text = fetcher.get_text(NCBI_EFETCH, params=ncbi_params(contig_acc),
+                            cache_key=f"ncbi_gb_{contig_acc}")
+    if text and "\n     CDS " in text:
+        path = contig_dir / f"{contig_acc}.gb"
+        path.write_text(text)
+        return path
+
+    sys.stderr.write(f"  [warn] no CDS features from ENA or NCBI for {contig_acc}\n")
+    return None
 
 
 def parse_contig(path: Path, contig_acc: str) -> tuple:
-    """Parse an EMBL flatfile into an ordered list of Gene objects."""
+    """Parse an EMBL or GenBank flatfile into an ordered list of Gene objects."""
     genes: List[Gene] = []
     contig_len = 0
+    fmt = "genbank" if path.suffix in (".gb", ".gbk") else "embl"
 
-    # The declared length on the ID line is authoritative; len(record.seq) can
-    # disagree if the flatfile is truncated or the sequence block is absent.
+    # The declared length on the ID/LOCUS line is authoritative; len(record.seq)
+    # can disagree if the flatfile is truncated or the sequence block is absent.
     with path.open() as fh:
         for line in fh:
-            if line.startswith("ID   "):
-                m = re.search(r"(\d+)\s+BP\.", line)
+            if line.startswith(("ID   ", "LOCUS ")):
+                m = re.search(r"(\d+)\s+(?:BP\.|bp)", line)
                 if m:
                     contig_len = int(m.group(1))
                 break
 
-    for record in SeqIO.parse(str(path), "embl"):
+    for record in SeqIO.parse(str(path), fmt):
         contig_len = max(contig_len, len(record.seq))
         for feat in record.features:
             if feat.type != "CDS":
@@ -497,7 +549,15 @@ def run_hmmsearch(hmm: Path, faa: Path, out_dir: Path, evalue: float,
     except subprocess.CalledProcessError as exc:
         sys.exit(f"hmmsearch failed with exit code {exc.returncode}.")
 
-    hits: Dict[str, dict] = {}
+    return parse_domtbl(domtbl)
+
+
+def parse_domtbl(domtbl: Path) -> Dict[str, dict]:
+    """Reduce a --domtblout file to one best-hit record per target."""
+    # One domtblout row per domain. The full-sequence E-value and score repeat on
+    # every row of a target, so coverage has to be the union of the domain
+    # envelopes -- taking a single row reports only the first domain's span.
+    raw: Dict[str, dict] = {}
     for line in domtbl.read_text().splitlines():
         if line.startswith("#") or not line.strip():
             continue
@@ -505,19 +565,29 @@ def run_hmmsearch(hmm: Path, faa: Path, out_dir: Path, evalue: float,
         if len(f) < 22:
             continue
         target, tlen = f[0], int(f[2])
-        qlen = int(f[5])
-        full_evalue, full_score = float(f[6]), float(f[7])
-        hmm_from, hmm_to = int(f[15]), int(f[16])
-        coverage = (hmm_to - hmm_from + 1) / qlen if qlen else 0.0
+        rec = raw.setdefault(target, {
+            "evalue": float(f[6]),
+            "bitscore": float(f[7]),
+            "target_len": tlen,
+            "qlen": int(f[5]),
+            "spans": [],
+        })
+        rec["spans"].append((int(f[15]), int(f[16])))    # hmm from, hmm to
 
-        prev = hits.get(target)
-        if prev is None or full_score > prev["bitscore"]:
-            hits[target] = {
-                "evalue": full_evalue,
-                "bitscore": full_score,
-                "coverage": round(coverage, 3),
-                "target_len": tlen,
-            }
+    hits: Dict[str, dict] = {}
+    for target, rec in raw.items():
+        covered, reach = 0, 0
+        for start, end in sorted(rec["spans"]):
+            start = max(start, reach + 1)
+            if end >= start:
+                covered += end - start + 1
+                reach = end
+        hits[target] = {
+            "evalue": rec["evalue"],
+            "bitscore": rec["bitscore"],
+            "coverage": round(covered / rec["qlen"], 3) if rec["qlen"] else 0.0,
+            "target_len": rec["target_len"],
+        }
     return hits
 
 
@@ -527,7 +597,11 @@ def run_hmmsearch(hmm: Path, faa: Path, out_dir: Path, evalue: float,
 
 
 def sketch_neighbourhood(rows: Sequence[NeighbourRow]) -> str:
-    """Render one locus as a single-line arrow diagram."""
+    """Render one locus as a single-line arrow diagram.
+
+    Drawn in the anchor's reading direction -- left to right is rank -N..+N --
+    so the arrows are relative to the anchor, not to the contig's + strand.
+    """
     parts = []
     for r in sorted(rows, key=lambda x: x.rank):
         label = r.protein_id or r.locus_tag or "?"
@@ -535,7 +609,7 @@ def sketch_neighbourhood(rows: Sequence[NeighbourRow]) -> str:
             label = f"*{label}*"
         if r.rank == 0:
             label = f"[{label}]"
-        parts.append(f"{label}->" if r.strand >= 0 else f"<-{label}")
+        parts.append(f"{label}->" if r.same_strand_as_anchor else f"<-{label}")
     return "  ".join(parts)
 
 
@@ -608,7 +682,10 @@ def write_reports(rows: List[NeighbourRow], out_dir: Path,
         fh.write("\n")
 
         fh.write("Loci\n" + "-" * 70 + "\n")
-        fh.write("Legend: [anchor]  *HMM hit*  > forward  < reverse\n\n")
+        fh.write("Legend: [anchor]  *HMM hit*  name-> same strand as the anchor  "
+                 "<-name opposite\n")
+        fh.write("        left to right is the anchor's reading direction "
+                 "(rank -N .. +N)\n\n")
         for (contig, anchor_pid, acc), group in sorted(loci.items()):
             anchor = next((g for g in group if g.rank == 0), group[0])
             flags = []
@@ -679,6 +756,10 @@ def main() -> None:
                    help="Restrict to Swiss-Prot rather than all of UniProtKB.")
     p.add_argument("--max-proteins", type=int, default=500,
                    help="Cap on anchor proteins per architecture (default: 500).")
+    p.add_argument("--max-contigs", type=int, default=200,
+                   help="Cap on distinct contigs downloaded (default: 200). "
+                        "--max-proteins is per architecture, so without this a "
+                        "common Pfam pair can pull thousands of multi-MB records.")
     p.add_argument("--evalue", type=float, default=1e-5,
                    help="hmmsearch full-sequence E-value threshold (default: 1e-5).")
     p.add_argument("--cpus", type=int, default=4, help="Threads for hmmsearch.")
@@ -763,6 +844,10 @@ def main() -> None:
 
     for a in resolved:
         if a.contig_acc not in contig_cache:
+            if len(contig_cache) >= args.max_contigs:
+                sys.stderr.write(f"  [warn] --max-contigs {args.max_contigs} reached "
+                                 "-- remaining anchors skipped\n")
+                break
             path = fetch_contig(fetcher, a.contig_acc, contig_dir)
             if path is None:
                 contig_cache[a.contig_acc] = ([], 0)
@@ -838,7 +923,7 @@ def main() -> None:
                 anchor_start=anchor_gene.start,
                 anchor_end=anchor_gene.end,
                 anchor_strand=anchor_gene.strand,
-                rank=g.index - anchor_gene.index,
+                rank=(g.index - anchor_gene.index) * (anchor_gene.strand or 1),
                 protein_id=g.protein_id,
                 locus_tag=g.locus_tag,
                 product=g.product,
