@@ -127,14 +127,20 @@ def find_col(schema, candidates):
 
 
 def sanitise_ids_for_type(ids, dtype, what="id"):
-    """If the column is integer, keep only numeric ids (warn on drops)."""
+    """If the column is integer, keep only numeric ids and normalise them (warn on drops).
+
+    Normalising matters: stripping 'MGYP' off 'MGYP000108638007' leaves '000108638007',
+    which SQL casts fine but never equals the '108638007' the parquet round-trips back,
+    so the later string comparisons all miss.
+    """
     if "INT" in dtype.upper():
-        good = [i for i in ids if re.fullmatch(r"-?\d+", i)]
-        if len(good) < len(ids):
+        numeric = [i for i in ids if re.fullmatch(r"-?\d+", i)]
+        if len(numeric) < len(ids):
             LOG.warning("%d %s(s) are non-numeric but the column is %s; dropped. "
-                        "(Did you mean --id-strip-prefix MGYP?)", len(ids) - len(good),
+                        "(Did you mean --id-strip-prefix MGYP?)", len(ids) - len(numeric),
                         what, dtype)
-        return good
+        # int() drops the leading zeros; dict.fromkeys re-dedups ids that only differed by them
+        return list(dict.fromkeys(str(int(i)) for i in numeric))
     return ids
 
 
@@ -430,8 +436,12 @@ def run(args):
             LOG.warning("%d id(s) not in metadata (e.g. %s)", len(missing),
                         sorted(missing)[:5])
         contig_ids = sorted(hit["contig_id"].astype(str).unique())
-        LOG.info("[1/3] done: %d protein_ids on %d contigs (one protein can sit on many)",
-                 hit["protein_id"].nunique(), len(contig_ids))
+        # step 1 is the slow scan; cache it now so a later failure doesn't cost it again
+        with open(f"{prefix}_contigs.txt", "w") as fh:
+            fh.write("\n".join(contig_ids) + "\n")
+        LOG.info("[1/3] done: %d protein_ids on %d contigs (one protein can sit on many); "
+                 "reusable via --contigs %s_contigs.txt",
+                 hit["protein_id"].nunique(), len(contig_ids), prefix)
 
     # ---- step 2: neighbourhoods --------------------------------------------------
     LOG.info("[2/3] fetching every gene on %d contigs ...", len(contig_ids))
