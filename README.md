@@ -117,9 +117,83 @@ python bin/make_contig_figure.py \
   --input <path/to/partners_maps.txt> \
   --output <path/to/figures/>
 ```
+`synteny_census.py` writes every gene on the contig to the map, so only the `--flank` genes
+either side of the anchor are drawn (default 10; `--flank 0` draws the whole contig). Long
+contigs are unreadable squeezed into the plot area, and past ~467 distinct legend entries the
+canvas exceeds cairo's 32767 px surface limit at 600 dpi and the render fails outright; the
+legend is capped at 24 entries with a `+N further annotations` note so that limit is
+unreachable at any `--flank`.
+
 Requires `cairosvg` and `pillow`. Tests:
 ```
 pytest tests/test_make_contig_figure.py
+```
+
+## bin/ida2synteny.py
+Answers the reverse of `synteny_census.py`: given a Pfam **domain architecture**, find the
+isolate-genome loci that carry it and ask whether an MGnifam HMM matches anything in their gene
+neighbourhoods. Running an HMM against every isolate genome does not scale, but InterPro has
+already run Pfam across UniProtKB, so querying by architecture (IDA) is a homology search
+someone else has already paid for — it yields a small, high-precision anchor set, and only then
+is it cheap to fetch contigs and run the expensive HMM against the handful of neighbours.
+
+```
+python bin/ida2synteny.py \
+  --pfams input/pfams_ida_test.txt \
+  --hmm MGYF0000000243.hmm \
+  -o output/ida2synteny_MGYF243/
+```
+
+Stages: InterPro IDA search → UniProtKB accessions → ENA/NCBI contig accession → flatfile with
+CDS features → ±`--window` gene neighbourhood → `hmmsearch` → joined TSVs.
+
+An IDA is a property of a *protein*, not of a contig, so domains on separate genes never
+co-occur in one architecture — except in gene fusions, which are flagged as
+`fusion_candidate` when the matched architecture carries more domains than were queried.
+Recovering gene-level context is what the contig stages are for.
+
+### Options worth knowing
+- `--ordered` / `--exact` — require the Pfams in the given order, or architectures containing
+  exactly these Pfams and nothing else. Start without both; they narrow hard.
+- `--window` (default 5) — genes reported either side of the anchor.
+- `--max-proteins` (default 500) — anchors **per architecture**.
+- `--max-contigs` (default 200) — cap on distinct contigs downloaded. Without it a common Pfam
+  pair can pull thousands of multi-MB records.
+- `--reviewed-only` — Swiss-Prot instead of all of UniProtKB.
+
+### Contig retrieval: ENA, then NCBI
+ENA's browser API resolves a WGS *contig* accession to the WGS *master* record, which only
+describes the set and carries no CDS features — asking for `WPOC01000026` returns
+`WPOC01000000`. A version suffix, `lineage`, `annotationOnly` and dbfetch all behave the same
+way, so for any WGS assembly the ENA route yields nothing usable and every such anchor is
+silently lost. NCBI serves the individual contig with full annotation, so it is the fallback,
+and both EMBL and GenBank flatfiles are parsed. Set `NCBI_API_KEY` and `NCBI_EMAIL` to raise
+the NCBI rate limit on large runs; neither is required.
+
+### Reading the output
+`rank` is signed in the **anchor's** reading direction — `-1` is upstream whether the anchor is
+on the + or the − strand — matching `synteny_census.py`'s `offset` column. The sketch is drawn
+in that same direction, so `name->` means *same strand as the anchor*, not the contig's +
+strand. Note that `intergenic_gap_bp` is the gap to the previous gene in coordinate order,
+whereas `synteny_census.py`'s `gap_bp` is the gap *to the anchor*; do not join the two tables
+on it. `hmm_coverage` is the union of the domain envelopes over the model, not one domain's
+span.
+
+### Outputs
+Written to `-o/--outdir`:
+- `report.txt` — human-readable per-locus sketch with flags (`FUSION-CANDIDATE`,
+  `WINDOW-TRUNCATED`, `NEAR-CONTIG-EDGE`)
+- `loci_summary.tsv` — one row per anchor: organism, assembly, contig, HMM hit ranks, sketch
+- `neighbourhood_genes.tsv` — one row per gene in every window (the full result)
+- `neighbours.faa`, `neighbours.domtbl`, `hmmsearch.log` — the HMM scan inputs and raw output
+- `contigs/` — the retrieved flatfiles (`.embl` from ENA, `.gb` from NCBI)
+- `cache/` — every HTTP response, so a rerun costs no network
+
+Requires `requests`, `biopython`, and `hmmsearch` (HMMER3) on `$PATH`. Tests (synthetic
+fixtures; cover the domain-envelope union, the strand-signed rank and sketch, WGS master
+detection, NCBI credential handling and GenBank parsing):
+```
+pytest tests/test_ida2synteny.py
 ```
 
 ## bin/biome_analysis.py
