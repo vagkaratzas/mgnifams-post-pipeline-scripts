@@ -95,6 +95,15 @@ def colour_genes(genes):
     return legend
 
 
+def gene_label(gene_id):
+    """MGnifams ids are bare integers and get the MGYP prefix and zero padding.
+
+    ida2synteny.py writes the same map format with ENA/NCBI protein accessions,
+    which are already printable and must be left alone.
+    """
+    return f"MGYP{int(gene_id):012d}" if gene_id.isdigit() else gene_id
+
+
 def crop_to_anchor(genes, flank):
     """Keep the `flank` genes either side of the anchor; flank<=0 keeps the contig.
 
@@ -171,10 +180,10 @@ def render(contig, genes):
     anchor = next((g for g in genes if g["anchor"]), None)
     a(f'<text x="{X0}" y="34" font-size="16" font-weight="700" fill="{INK}">'
       f'Contig {contig}</text>')
-    who = (f'<tspan font-weight="600" fill="{INK}">MGYP{int(anchor["mgyp"]):012d}</tspan>'
+    who = (f'<tspan font-weight="600" fill="{INK}">{gene_label(anchor["mgyp"])}</tspan>'
            if anchor else "—")
     a(f'<text x="{X0}" y="54" font-size="11.5" fill="{MUTED}">'
-      f'Gene neighbourhood of the MGnifams anchor {who}'
+      f'Gene neighbourhood of the anchor {who}'
       f' — {len(genes)} predicted CDS, {lo:,}–{hi:,} bp</text>')
     a(f'<line x1="{X0}" y1="68" x2="{X1}" y2="68" stroke="#E3E6EA" stroke-width="1"/>')
 
@@ -193,7 +202,11 @@ def render(contig, genes):
           f'stroke="{g["edge"]}" stroke-width="{1.6 if g["anchor"] else 1.0}" '
           f'stroke-linejoin="round"/>')
 
-        if g["pfams"] and (xb - xa) > 92:
+        # Pfam accessions are ~7 chars, product names from ida2synteny are up to
+        # 46, so the label only fits if it is measured -- ~6.1 px/char at 10.5 px
+        # bold, less the arrow head. The legend carries any name dropped here.
+        head_px = min(15.0, (xb - xa) * 0.42)
+        if g["pfams"] and (xb - xa) - head_px - 8 >= len(g["pfams"]) * 6.1:
             a(f'<text x="{(xa+xb)/2:.1f}" y="{Y_ARROW+3.6:.1f}" font-size="10.5" '
               f'font-weight="700" fill="#FFFFFF" text-anchor="middle" '
               f'letter-spacing="0.2">{g["pfams"]}</text>')
@@ -204,7 +217,7 @@ def render(contig, genes):
         if row is not None:
             dy = row * 26
             a(f'<text x="{xm:.1f}" y="{Y_ID-dy}" font-size="9.8" font-weight="600" '
-              f'fill="{INK}" text-anchor="middle">MGYP{int(g["mgyp"]):012d}</text>')
+              f'fill="{INK}" text-anchor="middle">{gene_label(g["mgyp"])}</text>')
             a(f'<text x="{xm:.1f}" y="{Y_AA-dy}" font-size="9" fill="{MUTED}" '
               f'text-anchor="middle">{g["aa"]} aa · '
               f'{"+" if g["strand"] > 0 else "−"} strand</text>')

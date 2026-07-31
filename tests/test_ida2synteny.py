@@ -48,13 +48,14 @@ def test_parse_domtbl_skips_short_and_blank_lines(tmp_path):
     assert list(i2s.parse_domtbl(path)) == ["ok"]
 
 
-def make_row(rank, strand, anchor_strand, protein_id, hmm_hit=False):
+def make_row(rank, strand, anchor_strand, protein_id, hmm_hit=False,
+             product="", start=1, end=2):
     return i2s.NeighbourRow(
         ida_id="x", ida_string="x", uniprot_acc="x", organism_name="x", tax_id="1",
         proteome="", assembly="", contig_acc="c", contig_len_bp=1000,
         n_genes_on_contig=10, anchor_protein_id="A", anchor_start=1, anchor_end=2,
         anchor_strand=anchor_strand, rank=rank, protein_id=protein_id, locus_tag="",
-        product="", start=1, end=2, strand=strand, length_aa=1,
+        product=product, start=start, end=end, strand=strand, length_aa=1,
         intergenic_gap_bp=None, same_strand_as_anchor=(strand == anchor_strand),
         hmm_hit=hmm_hit, hmm_evalue=None, hmm_bitscore=None, hmm_coverage=None,
         dist_to_contig_start_bp=0, dist_to_contig_end_bp=0,
@@ -67,6 +68,47 @@ def test_sketch_is_in_the_anchors_reading_direction():
     rows = [make_row(-1, -1, -1, "UP"), make_row(0, -1, -1, "ANCHOR"),
             make_row(1, 1, -1, "DOWN", hmm_hit=True)]
     assert i2s.sketch_neighbourhood(rows) == "UP->  [ANCHOR]->  <-*DOWN*"
+
+
+def test_map_annotation():
+    row = lambda product: make_row(0, 1, 1, "P1", product=product)  # noqa: E731
+    assert i2s.map_annotation(row("GMP synthase")) == "GMP synthase"
+    # uninformative products become unassigned grey rather than their own colour
+    assert i2s.map_annotation(row("hypothetical protein")) == "cluster:P1"
+    assert i2s.map_annotation(row("")) == "cluster:P1"
+    # the map format is | and [] delimited, so those must not survive
+    assert "|" not in i2s.map_annotation(row("a | b [c]"))
+    long = i2s.map_annotation(row("xylulose-5-phosphate/fructose-6-phosphate acetyltransferase"))
+    assert long == "xylulose-5-phosphate/fructose-6-phosphate…"
+
+
+def test_write_map_round_trips_through_make_contig_figure(tmp_path):
+    """The map this writes must parse back out of the figure script's reader."""
+    figure_bin = Path(__file__).resolve().parents[1] / "bin" / "make_contig_figure.py"
+    fspec = importlib.util.spec_from_file_location("make_contig_figure", figure_bin)
+    mcf = importlib.util.module_from_spec(fspec)
+    fspec.loader.exec_module(mcf)
+
+    group = [
+        make_row(-1, 1, -1, "AAA00001", start=10, end=30, product="GMP synthase"),
+        make_row(0, -1, -1, "AAA00002", start=100, end=120, product="amidase"),
+        make_row(1, -1, -1, "AAA00003", start=200, end=220, product="hypothetical protein"),
+    ]
+    path = tmp_path / "maps.txt"
+    i2s.write_map({("CTG1", "AAA00002", "U1"): group}, path)
+
+    blocks = list(mcf.parse_maps(path.read_text()))
+    assert len(blocks) == 1
+    contig, genes = blocks[0]
+    assert contig == "CTG1_AAA00002"          # locus id, so filenames cannot collide
+    assert [g["mgyp"] for g in genes] == ["AAA00001", "AAA00002", "AAA00003"]
+    assert [g["strand"] for g in genes] == [1, -1, -1]
+    assert [g["anchor"] for g in genes] == [False, True, False]
+    assert genes[0]["pfams"] == "GMP synthase"
+    assert genes[2]["pfams"] is None          # cluster: -> unassigned grey
+
+    svg = mcf.render(contig, genes)
+    assert "AAA00002" in svg and "▲ ANCHOR" in svg
 
 
 def test_wgs_master_re():
