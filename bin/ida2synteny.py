@@ -613,6 +613,43 @@ def sketch_neighbourhood(rows: Sequence[NeighbourRow]) -> str:
     return "  ".join(parts)
 
 
+def map_annotation(row: "NeighbourRow") -> str:
+    """The colour/legend key for one gene in the map line.
+
+    These loci come from isolate genomes, so the only per-gene annotation to
+    hand is the flatfile's free-text /product -- genes are therefore grouped by
+    identical product string, which splits wording variants of the same function
+    and lumps every 'hypothetical protein' together. Unproductive genes fall back
+    to `cluster:<id>`, which make_contig_figure.py draws as unassigned grey.
+    """
+    product = re.sub(r"[|\[\]]", " ", row.product or "").strip()
+    if not product or product.lower() in ("hypothetical protein",
+                                          "putative protein", "unknown"):
+        return f"cluster:{row.protein_id or row.locus_tag or 'na'}"
+    if len(product) > 46:                       # keeps the figure legend on one line
+        product = product[:45].rsplit(" ", 1)[0] + "…"
+    return product
+
+
+def write_map(loci: Dict[tuple, List[NeighbourRow]], path: Path) -> None:
+    """Write the `*_maps.txt` format that make_contig_figure.py renders."""
+    with path.open("w") as fh:
+        for (contig, anchor_pid, _acc), group in sorted(loci.items()):
+            # one block per locus, not per contig, so two anchors on the same
+            # contig cannot collide on the figure's output filename
+            fh.write(f"# contig {contig}_{anchor_pid}\n")
+            parts = []
+            for r in sorted(group, key=lambda x: x.start):
+                strand = {1: "+", -1: "-"}.get(r.strand, "?")
+                mark = " <<ANCHOR" if r.rank == 0 else ""
+                parts.append(
+                    f"[{r.start}-{r.end}({strand}) "
+                    f"{r.protein_id or r.locus_tag or 'na'} | "
+                    f"{map_annotation(r)} | {r.length_aa}aa{mark}]"
+                )
+            fh.write(" -- ".join(parts) + "\n\n")
+
+
 def write_reports(rows: List[NeighbourRow], out_dir: Path,
                   architectures: List[dict], stats: dict) -> None:
     # 1. Full per-gene table
@@ -717,7 +754,12 @@ def write_reports(rows: List[NeighbourRow], out_dir: Path,
                 fh.write(f"    flags: {', '.join(flags)}\n")
             fh.write("\n")
 
-    sys.stderr.write(f"\nWrote:\n  {genes_tsv}\n  {summary_tsv}\n  {report}\n")
+    # 4. Gene map, for make_contig_figure.py
+    maps_txt = out_dir / "neighbourhood_maps.txt"
+    write_map(loci, maps_txt)
+
+    sys.stderr.write(f"\nWrote:\n  {genes_tsv}\n  {summary_tsv}\n  {report}\n"
+                     f"  {maps_txt}\n")
 
 
 # small helper attached post-hoc to keep the dataclass declaration clean

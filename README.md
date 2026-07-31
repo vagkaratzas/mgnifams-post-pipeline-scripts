@@ -186,8 +186,23 @@ Written to `-o/--outdir`:
 - `loci_summary.tsv` — one row per anchor: organism, assembly, contig, HMM hit ranks, sketch
 - `neighbourhood_genes.tsv` — one row per gene in every window (the full result)
 - `neighbours.faa`, `neighbours.domtbl`, `hmmsearch.log` — the HMM scan inputs and raw output
+- `neighbourhood_maps.txt` — the same loci in `make_contig_figure.py`'s map format
 - `contigs/` — the retrieved flatfiles (`.embl` from ENA, `.gb` from NCBI)
 - `cache/` — every HTTP response, so a rerun costs no network
+
+### Visualising the loci
+`neighbourhood_maps.txt` feeds straight into the figure script, one PNG per locus:
+```
+python bin/make_contig_figure.py \
+  --input output/ida2synteny_MGYF243/neighbourhood_maps.txt \
+  --output output/ida2synteny_MGYF243/figures/
+```
+Blocks are keyed `<contig>_<anchor>` rather than by contig alone, so two anchors on one contig
+cannot collide on the output filename. Isolate genomes carry no per-gene Pfam assignment, so
+genes are coloured by their flatfile `/product` string — which means wording variants of the
+same function get different colours, and `hypothetical protein` is folded into the unassigned
+grey along with unannotated genes. Colour identity across loci is therefore a hint, not
+evidence; confirm anything load-bearing against the Pfam or HMM columns.
 
 Requires `requests`, `biopython`, and `hmmsearch` (HMMER3) on `$PATH`. Tests (synthetic
 fixtures; cover the domain-envelope union, the strand-signed rank and sketch, WGS master

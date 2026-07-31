@@ -63,6 +63,11 @@ def long_contig(n, anchor_at):
             for i in range(n)]
 
 
+def test_gene_label():
+    assert mcf.gene_label("914919837") == "MGYP000914919837"   # MGnifams integer id
+    assert mcf.gene_label("KFI61037") == "KFI61037"            # ida2synteny accession
+
+
 def test_crop_to_anchor():
     genes = long_contig(800, 400)
     kept = mcf.crop_to_anchor(genes, 10)
