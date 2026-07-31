@@ -1,4 +1,5 @@
 import importlib.util
+import re
 from pathlib import Path
 
 BIN = Path(__file__).resolve().parents[1] / "bin" / "make_contig_figure.py"
@@ -53,6 +54,34 @@ def test_tick_step():
     assert mcf.tick_step(500) == 100
     assert mcf.tick_step(14000) == 2000
     assert mcf.tick_step(1e9) == 200000
+
+
+def long_contig(n, anchor_at):
+    """n genes, each with its own Pfam, as parse_maps would have produced them."""
+    return [dict(start=i * 1000 + 1, end=i * 1000 + 301, strand=1, aa=100,
+                 mgyp=str(900000000 + i), pfams="PF%05d" % i, anchor=(i == anchor_at))
+            for i in range(n)]
+
+
+def test_crop_to_anchor():
+    genes = long_contig(800, 400)
+    kept = mcf.crop_to_anchor(genes, 10)
+    assert len(kept) == 21
+    assert [g["mgyp"] for g in kept] == [str(900000000 + i) for i in range(390, 411)]
+
+    assert mcf.crop_to_anchor(genes, 0) is genes             # 0 = whole contig
+    short = long_contig(5, 2)
+    assert mcf.crop_to_anchor(short, 10) is short            # already inside the window
+    assert len(mcf.crop_to_anchor(long_contig(800, 3), 10)) == 14   # anchor near the edge
+
+
+def test_canvas_stays_inside_cairo_size_limit():
+    """cairo refuses a surface over 32767 px; the legend used to blow past it."""
+    for flank in (10, 0):
+        svg = mcf.render("X", mcf.crop_to_anchor(long_contig(800, 400), flank))
+        height = int(re.search(r'height="(\d+)"', svg).group(1))
+        assert height * mcf.DPI / 96 < 32767
+    assert "further annotations" in svg      # flank=0 kept every gene, legend spilled
 
 
 def test_render_is_svg_covering_every_gene():
