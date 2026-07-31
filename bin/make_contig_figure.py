@@ -11,6 +11,9 @@ PNG per contig::
 Usage::
 
     python bin/make_contig_figure.py --input input/partners_maps.txt --output figures/
+
+``synteny_census.py`` writes every gene on the contig, so only the ``--flank``
+genes either side of the anchor are drawn.
 """
 
 import argparse
@@ -39,6 +42,9 @@ INK, MUTED = "#1A1D21", "#6B7280"
 
 W = 1180
 X0, X1 = 74, 1116                 # plot area in px
+# the legend is the only thing that grows the canvas, and cairo refuses a surface
+# over 32767 px on a side: at 600 dpi that is reached at ~467 legend entries
+LEGEND_MAX = 24
 Y_ARROW, AH = 150, 32             # arrow vertical centre / height
 Y_ID, Y_AA, Y_COORD = 108, 121, 182
 Y_AXIS, Y_LEG = 244, 300
@@ -89,6 +95,20 @@ def colour_genes(genes):
     return legend
 
 
+def crop_to_anchor(genes, flank):
+    """Keep the `flank` genes either side of the anchor; flank<=0 keeps the contig.
+
+    ``ascii_map()`` writes the whole contig, not the census window, so a long
+    contig arrives here with hundreds of genes. Those are unreadable squeezed
+    into 1042 px, and their legend alone drives the canvas past cairo's size
+    limit -- the figure is a neighbourhood plot, so draw the neighbourhood.
+    """
+    if flank <= 0 or len(genes) <= 2 * flank + 1:
+        return genes
+    i = next((k for k, g in enumerate(genes) if g["anchor"]), len(genes) // 2)
+    return genes[max(i - flank, 0):i + flank + 1]
+
+
 def place(rows, xm, width):
     """Pick a stagger row whose last label ends before this one starts.
 
@@ -129,7 +149,11 @@ def render(contig, genes):
     x = lambda bp: X0 + (bp - bp_lo) * sc
 
     legend = colour_genes(genes)
-    H = Y_LEG + ((len(legend) + 1) // 2) * 21 + 46
+    # a contig drawn whole can carry hundreds of distinct labels; keep the canvas
+    # inside cairo's limit whatever --flank was asked for
+    extra = max(len(legend) - LEGEND_MAX, 0)
+    legend = legend[:LEGEND_MAX]
+    H = Y_LEG + ((len(legend) + bool(extra) + 1) // 2) * 21 + 46
     rows = [0.0, 0.0]                 # right edge of the last label in each stagger row
     # the anchor claims a row before the greedy left-to-right pass, so a crowded
     # neighbourhood can never be the reason its label goes missing
@@ -221,6 +245,9 @@ def render(contig, genes):
           f'stroke="{edge}" stroke-width="0.9" stroke-linejoin="round"/>')
         a(f'<text x="{cx+33}" y="{cy}" font-size="9.4" fill="{INK}" '
           f'font-weight="600">{name}</text>')
+    if extra:
+        a(f'<text x="{cols[len(legend) % 2]}" y="{Y_LEG + (len(legend) // 2) * 21}" '
+          f'font-size="9.4" fill="{MUTED}">+{extra} further annotations</text>')
 
     a('</svg>')
     return "\n".join(s)
@@ -233,6 +260,9 @@ def parse_args(argv=None):
                    help="*_maps.txt written by synteny_census.py")
     p.add_argument("--output", required=True, type=Path,
                    help="output folder for the per-contig PNGs")
+    p.add_argument("--flank", type=int, default=10,
+                   help="genes drawn either side of the anchor (default 10; "
+                        "0 draws the whole contig)")
     return p.parse_args(argv)
 
 
@@ -243,6 +273,7 @@ def main(argv=None):
     for contig, genes in parse_maps(args.input.read_text()):
         if not genes:
             continue
+        genes = crop_to_anchor(genes, args.flank)
         png = cairosvg.svg2png(bytestring=render(contig, genes).encode(),
                                scale=DPI / 96)
         img = Image.open(io.BytesIO(png)).convert("RGB")
