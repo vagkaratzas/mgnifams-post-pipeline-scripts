@@ -36,6 +36,8 @@ workflow {
                 total_sequences : row.total_sequences as long,
                 total_residues  : row.total_residues as long,
                 n_chunks        : row.n_chunks as int,
+                // optional per-subset annotation_percentage_increase.csv
+                reference       : row.reference_csv ? resolveDir(sheet_dir, row.reference_csv) : null,
             ]
         }
 
@@ -153,25 +155,36 @@ workflow {
         .collect()
         .map { tsvs -> [ [ id: 'coverage' ], tsvs ] }
 
-    // An optional path has to be appended explicitly: combining with a channel
-    // carrying an empty list contributes nothing and silently shortens the tuple.
-    def reference = params.reference_csv ? file(params.reference_csv, checkIfExists: true) : []
+    // References are per subset, so each one is carried with the subset it
+    // belongs to rather than assumed. Subsets without one are simply not
+    // reconciled; the internal-consistency checks still run on them.
+    ch_references = ch_subsets
+        .filter { s -> s.reference }
+        .map { s -> [ s.subset, s.reference ] }
+        .toSortedList { a, b -> a[0] <=> b[0] }
+        .map { pairs -> [ pairs.collect { p -> p[1] }, pairs.collect { p -> p[0] } ] }
 
     // Hard assertions first: nothing downstream should render numbers that have
     // not been checked for internal consistency.
-    VALIDATE_COVERAGE( ch_reduced.map { m, tsvs -> [ m, tsvs, reference ] } )
+    VALIDATE_COVERAGE(
+        ch_reduced.combine(ch_references).map { m, tsvs, refs, subs -> [ m, tsvs, refs, subs ] }
+    )
 
     ch_sizes      = BUILD_CATEGORY_LISTS.out.sizes.map { _m, s -> s }.first()
     ch_validation = VALIDATE_COVERAGE.out.ok.map { _m, f -> f }
     ch_sheet      = channel.value( file(params.input) )
 
-    // Gated on the validation output, so a report can never be rendered from
-    // numbers that failed a check.
+    // Both are gated on the validation output, so nothing publishable can be
+    // rendered from numbers that failed a check -- a figure is quoted as
+    // readily as a table.
     COVERAGE_REPORT(
         ch_reduced.combine(ch_sizes).combine(ch_validation),
         ch_sheet
     )
-    COVERAGE_FIGURES( ch_reduced.combine(ch_sizes), ch_sheet )
+    COVERAGE_FIGURES(
+        ch_reduced.combine(ch_sizes).combine(ch_validation).map { m, tsvs, sizes, _ok -> [ m, tsvs, sizes ] },
+        ch_sheet
+    )
 
     // ------------------------------------------------------------ provenance
 

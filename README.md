@@ -7,13 +7,13 @@ residue and sequence level, split by family category (novel, membrane-α/β, dis
 
 Runs over `hmmsearch --domtblout` chunks that already exist — no search of its own — and emits
 publication-ready tables, four vector figures and a report with the numbers filled into prose.
-Validation is part of the run: with `--reference_csv` it must reproduce
-`annotation_percentage_increase.csv` exactly, or the run fails.
+Validation is part of the run: given a per-subset `reference_csv` it must reproduce that
+database's `annotation_percentage_increase.csv` exactly, or the run fails and publishes nothing.
 
 ```bash
 nextflow run pipelines/mgnifam_uniprot_coverage/main.nf -profile singularity \
   --input samplesheet.csv --lists_dir lists/ --mgnifams_hmm mgnifams_hmm.lib.gz \
-  --reference_csv annotation_percentage_increase.csv --outdir results
+  --outdir results
 ```
 
 See **[its README](pipelines/mgnifam_uniprot_coverage/README.md)** for the samplesheet format, the
