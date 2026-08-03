@@ -47,6 +47,8 @@ Scripts are meant to be run in this logical order:
    - `pipelines/annotation_percentages/main.nf` runs the local CSV/CSV.GZ → FASTA → hmmsearch (nf-core `hmmer/hmmsearch` module) → append → stats comparison workflow
    - That pipeline's python scripts (`extract_fasta_from_proteins_csv.py`, `append_mgnifams_annot.py`, `calculate_annotation_stats.py`, `compare_annotation_stats.py`) now live in `pipelines/annotation_percentages/bin/`, not the repo-root `bin/`
    - `calc_annot_diffs.py`, `extract_hmmsearch_mgnifams_exclusive.py`
+   - `pipelines/uniprot_annotation_percentages/main.nf` does the same against a UniProt FASTA, searching Pfam and MGnifams and comparing the two directly from the domtblouts
+   - `pipelines/mgnifam_uniprot_coverage/main.nf` consumes those domtbl chunks (it runs no search) and reports MGnifam coverage **beyond Pfam**, per family category, with tables, figures and a report; its scripts live in that pipeline's `bin/`
 
 5. **Database population** — Finalize the SQLite database:
    - `update_domain_blobs.py`, `update_secondary_structure_blobs.py`
