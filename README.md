@@ -20,13 +20,50 @@ python bin/mgnifam_uniprot_coverage_stats_from_domtbl.py map \
 # reduce: aggregate every chunk in that outdir
 python bin/mgnifam_uniprot_coverage_stats_from_domtbl.py reduce \
   --outdir output/mgnifam_uniprot_coverage/trembl_mgnifams \
-  --lists  input/mgnifams_uniprot_annotation_coverage/lists
+  --lists  input/mgnifams_uniprot_annotation_coverage/lists \
+  --totals-csv .../annotation_percentage_increase.csv
 ```
 
 `--lists` is a directory of `*.txt` MGnifam ID lists, one category per file (filename stem =
 category name). Omit it for the Pfam passes — then only the `any` pseudo-category is computed.
 **Give each pass its own `--outdir`**: `reduce` globs everything in the directory, so mixing the
 MGnifams and Pfam passes would aggregate them together.
+
+### MGnifam-exclusive coverage (`--mask`)
+Plain output is *total* MGnifams coverage, most of which Pfam already explains. Run the Pfam
+pass for a chunk first, then hand its per-target file back as a mask for the MGnifams pass over
+**the same chunk** — every count then covers only residues Pfam does not reach:
+
+```bash
+python bin/mgnifam_uniprot_coverage_stats_from_domtbl.py map \
+  --domtbl .../uniprot_trembl_chunk_000001_mgnifams.domtbl.gz \
+  --mask   output/.../trembl_pfams/uniprot_trembl_chunk_000001_pfam.pertarget.tsv.gz \
+  --lists  input/mgnifams_uniprot_annotation_coverage/lists \
+  --outdir output/mgnifam_uniprot_coverage/trembl_mgnifams_exclusive
+```
+
+Under `--mask`, `n_residues` is exclusive residues, `n_targets` counts sequences where MGnifams
+adds *any* residue, and `n_targets_unannotated` counts the stricter set: sequences the mask pass
+missed **entirely**, i.e. unannotated → annotated. A family is counted in `n_families` only if
+at least one of its hits leaves an unmasked residue.
+
+### Whole-database denominators (`--totals-csv`)
+Neither pass sees sequences with no hit at all, so a percentage-point gain needs the database
+totals. `--totals-csv` reads the `total_sequences_before` / `total_amino_acids_before` columns of
+an `annotation_percentage_increase.csv` (from `compare_annotation_stats.py`) and adds
+`pct_db_sequences`, `pct_db_residues` and `pp_gain_sequences` to `reduced.tsv`. Under `--mask`,
+`pct_db_residues` **is** the residue-level percentage-point gain.
+
+> ⚠️ Those columns treat the chunks present in `--outdir` as the whole database. They are only
+> quotable when **every** chunk of the search is there — reduce logs a warning with the chunk
+> count. The two TrEMBL chunks in `input/` are a ~1 % sample (Pfam reaches 0.61 % of TrEMBL
+> residues in them vs 50.6 % for the real full search), so their `pct_db_*` are placeholders.
+
+**Validation.** Run with `--no-env` on SwissProt, the exclusive `any` row reproduces the
+`annotation_percentages` pipeline exactly: 14,514,544 exclusive residues → **6.9479 pp** vs the
+CSV's `6.947853`, and 2,616 newly annotated sequences → **0.4546 pp** vs `0.454559`. The Pfam
+pass likewise reproduces `annotated_amino_acids_before` = 144,906,700 to the residue. With
+envelope coordinates the residue gain is 7.6792 pp; the sequence gain is coordinate-independent.
 
 ### Options worth knowing
 - `--env` (**default**) uses envelope coordinates; `--no-env` switches to alignment coordinates
@@ -42,7 +79,7 @@ MGnifams and Pfam passes would aggregate them together.
 | File | Content |
 |------|---------|
 | `<stem>.pertarget.tsv.gz` | `target, tlen, category, n_res, intervals` — merged spans per target |
-| `<stem>.summary.tsv` | per-chunk `category, n_targets, n_residues, n_families` |
+| `<stem>.summary.tsv` | per-chunk `category, n_targets, n_residues, n_families, n_targets_unannotated` |
 | `<stem>.families.tsv.gz` | `category, family` — so reduce can **union** families, never sum them |
 | `logs/chunk_NNNNNN.log` | per-chunk progress, plus the coverage-exceeds-target-length sanity check |
 | `reduced.tsv` | the headline table: families hit, targets and residues, each as % of `any` |
@@ -54,21 +91,29 @@ ratio rather than hiding it.
 ### Cost per chunk (measured, 12-core box, single-threaded)
 | Pass | domtbl.gz | rows | targets | wall | peak RSS |
 |------|-----------|------|---------|------|----------|
-| SwissProt MGnifams | 204 MB | 3.6 M | 204 k | 13 s | 0.49 GB |
-| SwissProt Pfam | 63 MB | 1.2 M | 553 k | 7 s | 0.39 GB |
-| TrEMBL MGnifams ch1 | 466 MB | 8.2 M | 374 k | 36 s | 1.03 GB |
-| TrEMBL MGnifams ch2 | 368 MB | 6.5 M | 324 k | 31 s | 0.83 GB |
-| TrEMBL Pfam ch1 | 88 MB | 1.6 M | 783 k | 18 s | 0.54 GB |
-| TrEMBL Pfam ch2 | 87 MB | 1.6 M | 766 k | 14 s | 0.54 GB |
+| SwissProt Pfam | 63 MB | 1.2 M | 553 k | 10 s | 0.39 GB |
+| SwissProt MGnifams | 204 MB | 3.6 M | 204 k | 15 s | 0.49 GB |
+| SwissProt MGnifams `--mask` | 204 MB | 3.6 M | 204 k | 19 s | 0.67 GB |
+| TrEMBL Pfam ch1 / ch2 | 88 / 87 MB | 1.6 M | ~775 k | 15 s | 0.57 GB |
+| TrEMBL MGnifams ch1 | 466 MB | 8.2 M | 374 k | 37 s | 1.03 GB |
+| TrEMBL MGnifams ch2 | 368 MB | 6.5 M | 324 k | 29 s | 0.85 GB |
+| TrEMBL MGnifams ch1 `--mask` | 466 MB | 8.2 M | 374 k | 47 s | 1.28 GB |
+| TrEMBL MGnifams ch2 `--mask` | 368 MB | 6.5 M | 324 k | 35 s | 1.07 GB |
 
 All coordinates for a chunk are held in RAM until the merge, so cost is linear and predictable:
 
     peak RSS ≈ 0.09 KB × kept rows + 0.55 KB × distinct targets   (≈ 1 GB per 8 M rows)
     wall     ≈ 4 s per 1 M rows (+ gzip decode)
 
-Reduce is trivial (< 1 s, a few hundred MB). Request **4 GB for chunks up to ~20 M rows** and
-scale from there; a 100 M-row chunk would want ~10 GB, so split the search further rather than
-asking for a fat node.
+`--mask` adds the Pfam per-target spans on top — about +0.25 GB and +25 % wall here, and it
+scales with the *mask's* target count, not the MGnifams one.
+
+Reduce is trivial (< 1 s, a few hundred MB). Request **4 GB for chunks up to ~20 M rows** (6 GB
+with `--mask`) and scale from there; a 100 M-row chunk would want ~10 GB, so split the search
+further rather than asking for a fat node.
+
+Outputs of the full run live under `output/mgnifam_uniprot_coverage/{env,ali}/`, one directory
+per pass.
 
 ## bin/synteny_census.py
 Gene-neighbourhood / synteny analysis for an MGnifam family, against the MGnify proteins
