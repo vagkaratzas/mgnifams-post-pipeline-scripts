@@ -1,0 +1,3 @@
+subset,mgnifams_domtbl_dir,pfam_domtbl_dir,total_sequences,total_residues,n_chunks
+swissprot,swissprot/hmmsearch_mgnifams,swissprot/hmmsearch_pfams,34,7858,1
+trembl,trembl/hmmsearch_mgnifams,trembl/hmmsearch_pfams,66,18285,2
