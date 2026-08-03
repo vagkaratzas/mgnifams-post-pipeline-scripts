@@ -44,8 +44,12 @@ Stage 2 (reduce):
 
     --totals-csv supplies the whole-database denominators -- sequences and
     residues including everything with no hit at all, which this script never
-    sees -- turning coverage into a quotable percentage-point gain. Valid only
-    when EVERY chunk of the search is present in --outdir.
+    sees -- turning coverage into a quotable percentage-point gain.
+    --total-sequences/--total-residues give the same two numbers directly.
+
+    Those denominators are valid only when EVERY chunk of the search is present
+    in --outdir, so pair them with --expect-chunks N, which fails the run rather
+    than quietly understating every percentage.
 
 Notes
 -----
@@ -281,9 +285,21 @@ def run_map(args):
         logger.info("no --lists given; computing 'any' only")
         cats, lut, cat_names = {}, {}, ["any"]
 
-    mask = load_mask(args.mask, logger) if args.mask else {}
-    if mask:
-        logger.info("EXCLUSIVE mode: reporting only residues absent from the mask")
+    mask = {}
+    if args.mask:
+        # A mask path that does not resolve would silently downgrade this run to
+        # plain total coverage while every output still says "exclusive". That is
+        # the one failure mode that quietly produces a wrong published number.
+        if not os.path.isfile(args.mask) or os.path.getsize(args.mask) == 0:
+            sys.exit("--mask %s is missing or empty; refusing to report total "
+                     "coverage as exclusive" % args.mask)
+        mask = load_mask(args.mask, logger)
+        if mask:
+            logger.info("EXCLUSIVE mode: reporting only residues absent from the mask")
+        else:
+            # legitimate for a chunk the mask pass never hit, but loud either way
+            logger.error("mask %s parsed to 0 targets: this chunk's output is "
+                         "identical to total coverage", args.mask)
 
     cov = defaultdict(lambda: defaultdict(list))
     tlens = {}
@@ -416,6 +432,11 @@ def run_reduce(args):
     summaries = sorted(glob.glob(os.path.join(args.outdir, "*.summary.tsv")))
     if not summaries:
         sys.exit("no *.summary.tsv found in %s" % args.outdir)
+    if args.expect_chunks is not None and len(summaries) != args.expect_chunks:
+        sys.exit("expected %d chunk summaries in %s but found %d: an incomplete "
+                 "chunk set still reduces cleanly, it just understates every "
+                 "whole-database percentage" %
+                 (args.expect_chunks, args.outdir, len(summaries)))
     logger.info("reducing %d chunk summaries", len(summaries))
 
     tot_targets = defaultdict(int)
@@ -445,8 +466,14 @@ def run_reduce(args):
     cats = load_lists(args.lists, logger) if args.lists else {}
     any_res = tot_residues.get("any", 0)
     any_tgt = tot_targets.get("any", 0)
-    db_tgt, db_res = load_totals(args.totals_csv, logger) if args.totals_csv \
-        else (0, 0)
+    if args.totals_csv:
+        db_tgt, db_res = load_totals(args.totals_csv, logger)
+    elif args.total_sequences and args.total_residues:
+        db_tgt, db_res = args.total_sequences, args.total_residues
+        logger.info("db totals given directly: %d sequences, %d residues",
+                    db_tgt, db_res)
+    else:
+        db_tgt = db_res = 0
     if db_res:
         logger.warning("pct_db_* columns treat these %d chunk(s) as the WHOLE "
                        "database -- they are only quotable if every chunk of "
@@ -565,6 +592,14 @@ def main():
                    help="annotation_percentage_increase.csv; its *_before "
                         "totals give the whole-database denominators, so "
                         "coverage can be quoted as a percentage-point gain")
+    r.add_argument("--total-sequences", type=int, default=None,
+                   help="whole-database sequence count; alternative to "
+                        "--totals-csv, must be paired with --total-residues")
+    r.add_argument("--total-residues", type=int, default=None,
+                   help="whole-database residue count")
+    r.add_argument("--expect-chunks", type=int, default=None,
+                   help="fail unless exactly N chunk summaries are present; "
+                        "the guard against quoting a partial chunk set")
     r.add_argument("--verbose", action="store_true")
     r.set_defaults(func=run_reduce)
 
