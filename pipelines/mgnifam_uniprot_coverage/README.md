@@ -26,7 +26,6 @@ nextflow run main.nf -profile singularity \
   --input        samplesheet.csv \
   --lists_dir    /path/to/lists \
   --mgnifams_hmm /path/to/mgnifams_hmm.lib.gz \
-  --reference_csv /path/to/annotation_percentage_increase.csv \
   --outdir       results
 ```
 
@@ -42,14 +41,19 @@ One row per database subset. Directory columns may be relative — they resolve 
 samplesheet's own location, so a sheet travels with its data.
 
 ```csv
-subset,mgnifams_domtbl_dir,pfam_domtbl_dir,total_sequences,total_residues,n_chunks
-swissprot,/nfs/.../swissprot/hmmsearch_mgnifams,/nfs/.../swissprot/hmmsearch_pfams,575503,208906902,1
-trembl,/nfs/.../trembl/hmmsearch_mgnifams,/nfs/.../trembl/hmmsearch_pfams,149234636,58049358499,150
+subset,mgnifams_domtbl_dir,pfam_domtbl_dir,total_sequences,total_residues,n_chunks,reference_csv
+swissprot,/nfs/.../swissprot/hmmsearch_mgnifams,/nfs/.../swissprot/hmmsearch_pfams,575503,208906902,1,sprot_increase.csv
+trembl,/nfs/.../trembl/hmmsearch_mgnifams,/nfs/.../trembl/hmmsearch_pfams,149234636,58049358499,150,trembl_increase.csv
 ```
 
 `total_sequences` / `total_residues` are the **whole** database, sequences with no hit included —
 neither search sees those, and without them there is no denominator for a percentage-point gain.
 `n_chunks` is the `--expect-chunks` guard, not decoration.
+
+`reference_csv` is optional and **per subset**: the `annotation_percentage_increase.csv` that
+`uniprot_annotation_percentages` produced for *that* database. Each subset is reconciled against
+its own file, and when every subset has one the pooled UniProtKB view is checked against their
+sum. Subsets without a reference still get every internal-consistency check.
 
 ### Parameters
 
@@ -58,7 +62,6 @@ neither search sees those, and without them there is no denominator for a percen
 | `--input` | — | samplesheet above |
 | `--lists_dir` | — | directory of curated `*.txt` MGnifam category lists |
 | `--mgnifams_hmm` | — | HMM library; `hmmstat` gives the library-size denominator |
-| `--reference_csv` | none | `annotation_percentage_increase.csv` to reconcile against |
 | `--coords` | `['ali','env']` | alignment coordinates reproduce the published figures, envelope is the sensitivity check |
 
 ## What it does
@@ -72,7 +75,7 @@ MAP_TOTAL              total MGnifam coverage, by category
 MAP_EXCLUSIVE          MGnifam coverage minus the Pfam spans of the SAME chunk
   |
 COVERAGE_REDUCE        3 views (swissprot, trembl, pooled uniprotkb) x 3 passes x 2 coords
-VALIDATE_COVERAGE      hard assertions; the report is gated on it
+VALIDATE_COVERAGE      hard assertions; report and figures are gated on it
 COVERAGE_REPORT        tables + filled prose, Markdown and self-contained HTML
 COVERAGE_FIGURES       four vector PDFs
 PROVENANCE_REPORT      input checksums, tool versions, command line
@@ -110,7 +113,7 @@ to be the mask.
 
 ## Validation
 
-`VALIDATE_COVERAGE` fails the run on any of:
+`VALIDATE_COVERAGE` gates the report and the figures, and fails the run on any of:
 
 - exclusive residues/targets exceeding the total pass, per category
 - any category exceeding its `any` row
@@ -118,12 +121,13 @@ to be the mask.
 - newly annotated counts differing between `ali` and `env` (it is a presence/absence quantity, so
   a difference is a bug, not a modelling choice)
 - the pooled UniProtKB view not equalling the sum of its subsets
-- with `--reference_csv`, the SwissProt `ali` numbers not reproducing the independently computed
-  `annotation_percentage_increase.csv` exactly
+- a subset's `ali` numbers not reproducing its own `reference_csv` exactly
+- the pooled view not equalling the sum of the per-subset references
 
-That last one is the check worth having: it exercises the whole DAG end to end. The engine
-reproduces the reference to the residue — 144,906,700 Pfam aa, 14,514,544 exclusive aa, 6.9479 pp,
-2,616 newly annotated sequences, 0.4546 pp.
+Those last two are the checks worth having: they exercise the whole DAG end to end. The engine
+reproduces the SwissProt reference to the residue — 144,906,700 Pfam aa, 14,514,544 exclusive aa,
+6.9479 pp, 2,616 newly annotated sequences, 0.4546 pp. Verified in both directions: swapping in
+the wrong subset's reference fails all seven checks and publishes neither report nor figures.
 
 It also warns, without failing, when the Pfam share of the database is far from the reference's —
 the signature of a partial chunk set.

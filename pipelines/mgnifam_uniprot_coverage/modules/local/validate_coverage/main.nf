@@ -8,7 +8,7 @@ process VALIDATE_COVERAGE {
         'biocontainers/python:3.12' }"
 
     input:
-    tuple val(meta), path(reduced), path(reference)
+    tuple val(meta), path(reduced), path(references), val(reference_subsets)
 
     output:
     tuple val(meta), path("validation.txt"), emit: ok
@@ -18,8 +18,13 @@ process VALIDATE_COVERAGE {
     task.ext.when == null || task.ext.when
 
     script:
-    def args    = task.ext.args ?: ''
-    def ref_arg = reference ? "--reference ${reference}" : ''
+    def args = task.ext.args ?: ''
+    // Pair each staged CSV with the subset it belongs to; both lists keep the
+    // order they were built in, so a subset can never be checked against
+    // another subset's reference.
+    def ref_list = references instanceof List ? references : (references ? [references] : [])
+    def sub_list = reference_subsets instanceof List ? reference_subsets : (reference_subsets ? [reference_subsets] : [])
+    def ref_arg  = ref_list ? "--references " + [sub_list, ref_list].transpose().collect { s, f -> "${s}=${f}" }.join(' ') : ''
     """
     validate_coverage.py \\
         --reduced ${reduced} \\
