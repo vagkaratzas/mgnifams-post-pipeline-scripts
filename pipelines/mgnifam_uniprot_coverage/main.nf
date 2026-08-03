@@ -128,11 +128,11 @@ workflow {
         .groupTuple()
         .map { key, metas, sms, fams ->
             // one meta per subset, deduplicated, then summed
-            def by_subset = metas.collectEntries { [ (it.id): it ] }.values()
+            def by_subset = metas.collectEntries { m -> [ (m.id): m ] }.values()
             [ [ id: 'uniprotkb', pass: key[0], coords: key[1],
-                total_sequences: by_subset.sum { it.total_sequences },
-                total_residues : by_subset.sum { it.total_residues },
-                n_chunks       : by_subset.sum { it.n_chunks } ], sms, fams ]
+                total_sequences: by_subset.sum { m -> m.total_sequences },
+                total_residues : by_subset.sum { m -> m.total_residues },
+                n_chunks       : by_subset.sum { m -> m.n_chunks } ], sms, fams ]
         }
 
     COVERAGE_REDUCE(
