@@ -9,7 +9,7 @@ every target sequence appears in exactly one chunk -- so per-target interval
 merging is fully local and needs no cross-chunk reduction.
 
 Stage 1 (map, parallel over chunks):
-    python mgnifam_uniprot_coverage_stats_from_domtbl.pymap \
+    python mgnifam_uniprot_coverage_stats_from_domtbl.py map \
         --domtbl uniprot_trembl_chunk_000001_mgnifams.domtbl.gz \
         --lists /path/to/lists \
         --outdir /path/to/out \
@@ -17,15 +17,35 @@ Stage 1 (map, parallel over chunks):
 
     Emits, per chunk:
       <stem>.pertarget.tsv.gz  target, tlen, category, n_res, intervals
-      <stem>.summary.tsv       category, n_targets, n_residues, n_families
+      <stem>.summary.tsv       category, n_targets, n_residues, n_families,
+                               n_targets_unannotated
       <stem>.families.tsv.gz   category, family  (for correct cross-chunk union)
       logs/chunk_NNNNNN.log    progress log
 
     --lists may be omitted (e.g. for the Pfam passes), in which case only the
     "any" pseudo-category is computed.
 
+Stage 1b (map, MGnifam-EXCLUSIVE):
+    Run the Pfam pass for a chunk first, then feed its per-target file back as
+    a mask for the MGnifams pass over the SAME chunk:
+
+    python mgnifam_uniprot_coverage_stats_from_domtbl.py map \
+        --domtbl uniprot_trembl_chunk_000001_mgnifams.domtbl.gz \
+        --mask   uniprot_trembl_chunk_000001_pfam.pertarget.tsv.gz \
+        --lists /path/to/lists --outdir /path/to/out_exclusive
+
+    Every count then excludes residues Pfam already explains, and
+    n_targets_unannotated counts the sequences Pfam missed entirely.
+
 Stage 2 (reduce):
-    python mgnifam_uniprot_coverage_stats_from_domtbl.pyreduce --outdir /path/to/out --lists /path/to/lists
+    python mgnifam_uniprot_coverage_stats_from_domtbl.py reduce \
+        --outdir /path/to/out --lists /path/to/lists \
+        --totals-csv annotation_percentage_increase.csv
+
+    --totals-csv supplies the whole-database denominators -- sequences and
+    residues including everything with no hit at all, which this script never
+    sees -- turning coverage into a quotable percentage-point gain. Valid only
+    when EVERY chunk of the search is present in --outdir.
 
 Notes
 -----
@@ -48,6 +68,8 @@ Notes
 """
 
 import argparse
+import bisect
+import csv
 import glob
 import gzip
 import logging
@@ -138,6 +160,86 @@ def pretty_family(fam):
     return "MGYF%010d" % int(fam) if fam.isdigit() else fam
 
 
+def subtract_intervals(ivs, mask):
+    """ivs minus mask, both merged/sorted. Returns (list, total_residues).
+
+    This is what makes a coverage figure *MGnifam-exclusive*: `mask` is the
+    Pfam-covered span of the same target, so what survives is residues only
+    MGnifams explains.
+    """
+    if not mask:
+        return ivs, sum(e - s + 1 for s, e in ivs)
+    out = []
+    total = 0
+    j = 0
+    for s, e in ivs:
+        while j < len(mask) and mask[j][1] < s:
+            j += 1
+        cur = s
+        k = j
+        while k < len(mask) and mask[k][0] <= e:
+            ms, me = mask[k]
+            if ms > cur:
+                out.append((cur, ms - 1))
+                total += ms - cur
+            cur = max(cur, me + 1)
+            k += 1
+        if cur <= e:
+            out.append((cur, e))
+            total += e - cur + 1
+    return out, total
+
+
+def interval_is_masked(mask, s, e):
+    """True if [s, e] lies wholly inside one mask interval.
+
+    mask is merged, so a span that survives nowhere must sit inside a single
+    interval -- one bisect answers it. Used to decide whether a family
+    contributes any exclusive residue at all, without accumulating per-family
+    intervals for every target.
+    """
+    i = bisect.bisect_left(mask, (s + 1,)) - 1
+    return i >= 0 and mask[i][1] >= e
+
+
+def load_mask(path, logger=None):
+    """Read a .pertarget.tsv.gz from another pass into {target: merged spans}.
+
+    Only the 'any' rows are used -- that is the full covered span of that
+    pass (e.g. all of Pfam) for the target.
+    """
+    mask = {}
+    with open_maybe_gz(path) as fh:
+        fh.readline()  # header
+        for ln in fh:
+            target, _tlen, cat, _nres, spans = ln.rstrip("\n").split("\t")
+            if cat != "any" or not spans:
+                continue
+            mask[target] = tuple(
+                tuple(int(x) for x in span.split("-")) for span in spans.split(",")
+            )
+    if logger:
+        logger.info("mask: %d targets from %s", len(mask), path)
+    return mask
+
+
+def load_totals(csv_path, logger=None):
+    """(total_sequences, total_residues) of the searched database.
+
+    Reads the `*_before` totals from an annotation_percentage_increase.csv
+    produced by compare_annotation_stats.py -- the whole database, including
+    sequences with no hit at all, which this script never sees.
+    """
+    with open(csv_path) as fh:
+        row = next(csv.DictReader(fh))
+    seqs = int(row["total_sequences_before"])
+    res = int(row["total_amino_acids_before"])
+    if logger:
+        logger.info("db totals from %s: %d sequences, %d residues",
+                    csv_path, seqs, res)
+    return seqs, res
+
+
 def load_lists(listdir, logger=None):
     """Return {category: set(bare_family_ids)}. Category name = filename stem."""
     cats = {}
@@ -179,6 +281,10 @@ def run_map(args):
         logger.info("no --lists given; computing 'any' only")
         cats, lut, cat_names = {}, {}, ["any"]
 
+    mask = load_mask(args.mask, logger) if args.mask else {}
+    if mask:
+        logger.info("EXCLUSIVE mode: reporting only residues absent from the mask")
+
     cov = defaultdict(lambda: defaultdict(list))
     tlens = {}
     fams_seen = defaultdict(set)
@@ -215,11 +321,19 @@ def run_map(args):
             if target not in tlens:
                 tlens[target] = int(f[2])
 
+            in_cats = lut.get(query, ())
             slot = cov[target]
             slot["any"].append(iv)
-            fams_seen["any"].add(query)
-            for c in lut.get(query, ()):
+            for c in in_cats:
                 slot[c].append(iv)
+
+            # a family counts as "seen" only if this hit leaves residues the
+            # mask does not already explain
+            tmask = mask.get(target)
+            if tmask is not None and interval_is_masked(tmask, iv[0], iv[1]):
+                continue
+            fams_seen["any"].add(query)
+            for c in in_cats:
                 fams_seen[c].add(query)
 
     logger.info("parsed rows=%d kept=%d malformed=%d targets=%d elapsed=%.1fs",
@@ -233,6 +347,7 @@ def run_map(args):
 
     n_targets = defaultdict(int)
     n_residues = defaultdict(int)
+    n_unannotated = defaultdict(int)  # only meaningful under --mask
     n_overlong = 0
 
     logger.info("merging intervals and writing per-target detail...")
@@ -241,10 +356,19 @@ def run_map(args):
         out.write("target\ttlen\tcategory\tn_res\tintervals\n")
         for target, bycat in cov.items():
             tlen = tlens[target]
+            tmask = mask.get(target, ())
             for cat, ivs in bycat.items():
                 merged, nres = merge_intervals(ivs)
                 if nres > tlen:
                     n_overlong += 1
+                if mask:
+                    merged, nres = subtract_intervals(merged, tmask)
+                    if not nres:  # nothing exclusive here; do not count target
+                        continue
+                    if not tmask:
+                        # the mask pass never touched this sequence at all, so
+                        # MGnifams takes it from unannotated to annotated
+                        n_unannotated[cat] += 1
                 n_targets[cat] += 1
                 n_residues[cat] += nres
                 spans = ",".join("%d-%d" % (s, e) for s, e in merged)
@@ -259,12 +383,16 @@ def run_map(args):
 
     summary = os.path.join(args.outdir, stem + ".summary.tsv")
     with open(summary, "w") as out:
-        out.write("category\tn_targets\tn_residues\tn_families\n")
+        out.write("category\tn_targets\tn_residues\tn_families"
+                  "\tn_targets_unannotated\n")
         for cat in cat_names:
-            out.write("%s\t%d\t%d\t%d\n" % (cat, n_targets[cat],
-                                            n_residues[cat], len(fams_seen[cat])))
-            logger.info("  %-22s targets=%-10d residues=%-12d families=%d",
-                        cat, n_targets[cat], n_residues[cat], len(fams_seen[cat]))
+            out.write("%s\t%d\t%d\t%d\t%d\n" % (
+                cat, n_targets[cat], n_residues[cat], len(fams_seen[cat]),
+                n_unannotated[cat]))
+            logger.info("  %-22s targets=%-10d residues=%-12d families=%-7d "
+                        "unannotated_before=%d",
+                        cat, n_targets[cat], n_residues[cat],
+                        len(fams_seen[cat]), n_unannotated[cat])
 
     fampath = os.path.join(args.outdir, stem + ".families.tsv.gz")
     with gzip.open(fampath, "wt") as out:
@@ -292,13 +420,15 @@ def run_reduce(args):
 
     tot_targets = defaultdict(int)
     tot_residues = defaultdict(int)
+    tot_unannotated = defaultdict(int)
     for path in summaries:
         with open(path) as fh:
             fh.readline()  # header; readline (not next) tolerates an empty file
             for ln in fh:
-                cat, nt, nr, _nf = ln.rstrip("\n").split("\t")
+                cat, nt, nr, _nf, nu = ln.rstrip("\n").split("\t")
                 tot_targets[cat] += int(nt)
                 tot_residues[cat] += int(nr)
+                tot_unannotated[cat] += int(nu)
 
     # family counts must be UNIONED across chunks, never summed: the same
     # family can hit targets in many chunks.
@@ -315,11 +445,20 @@ def run_reduce(args):
     cats = load_lists(args.lists, logger) if args.lists else {}
     any_res = tot_residues.get("any", 0)
     any_tgt = tot_targets.get("any", 0)
+    db_tgt, db_res = load_totals(args.totals_csv, logger) if args.totals_csv \
+        else (0, 0)
+    if db_res:
+        logger.warning("pct_db_* columns treat these %d chunk(s) as the WHOLE "
+                       "database -- they are only quotable if every chunk of "
+                       "the search is present in %s", len(summaries), args.outdir)
 
     out_path = os.path.join(args.outdir, "reduced.tsv")
     with open(out_path, "w") as out:
         hdr = ("category\tfamilies_in_list\tfamilies_with_hits\tpct_families_hit"
                "\tn_targets\tpct_targets\tn_residues\tpct_residues")
+        if db_res:
+            hdr += ("\tpct_db_sequences\tpct_db_residues"
+                    "\tn_seqs_unannotated_before\tpp_gain_sequences")
         out.write(hdr + "\n")
         print(hdr)
         for cat in sorted(tot_residues, key=lambda c: (c == "any", c)):
@@ -334,6 +473,17 @@ def run_reduce(args):
             row = "%s\t%s\t%d\t%s\t%d\t%.2f\t%d\t%.2f" % (
                 cat, in_list, hit, pct_fam, tot_targets[cat], pct_t,
                 tot_residues[cat], pct_r)
+            if db_res:
+                # the figures that can be quoted as percentage-point gains:
+                # shares of the WHOLE database, unhit sequences included.
+                # pct_db_residues under --mask IS the residue-level pp gain;
+                # the sequence-level one counts only sequences the mask pass
+                # missed entirely, which is the stricter claim.
+                row += "\t%.4f\t%.4f\t%d\t%.4f" % (
+                    100.0 * tot_targets[cat] / db_tgt,
+                    100.0 * tot_residues[cat] / db_res,
+                    tot_unannotated[cat],
+                    100.0 * tot_unannotated[cat] / db_tgt)
             out.write(row + "\n")
             print(row)
 
@@ -398,6 +548,10 @@ def main():
     m.add_argument("--env", action=argparse.BooleanOptionalAction, default=True,
                    help="envelope (default) rather than alignment coordinates; "
                         "--no-env for ali coords")
+    m.add_argument("--mask", default=None,
+                   help="a .pertarget.tsv.gz from another pass (e.g. the Pfam "
+                        "one for the SAME chunk); every count becomes exclusive "
+                        "of the residues it covers")
     m.add_argument("--log-every", type=int, default=5000000,
                    help="log progress every N rows read")
     m.add_argument("--verbose", action="store_true")
@@ -407,6 +561,10 @@ def main():
     r.add_argument("--outdir", required=True,
                    help="directory containing the map-stage outputs")
     r.add_argument("--lists", default=None)
+    r.add_argument("--totals-csv", default=None,
+                   help="annotation_percentage_increase.csv; its *_before "
+                        "totals give the whole-database denominators, so "
+                        "coverage can be quoted as a percentage-point gain")
     r.add_argument("--verbose", action="store_true")
     r.set_defaults(func=run_reduce)
 
