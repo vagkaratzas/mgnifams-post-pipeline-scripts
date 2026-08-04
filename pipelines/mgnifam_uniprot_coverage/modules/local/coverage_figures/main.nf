@@ -3,9 +3,11 @@ process COVERAGE_FIGURES {
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
+    // plotnine is conda-forge, so there is no biocontainer for it and nothing on
+    // depot.galaxyproject.org; these are Seqera community builds of environment.yml.
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/plotnine:0.14.5--pyhdfd78af_0' :
-        'biocontainers/plotnine:0.14.5--pyhdfd78af_0' }"
+        'oras://community.wave.seqera.io/library/python_plotnine_pandas:2b0b556e61a10ef2' :
+        'community.wave.seqera.io/library/python_plotnine_pandas:dae7bdcea75615d2' }"
 
     input:
     tuple val(meta), path(reduced), path(library_sizes)

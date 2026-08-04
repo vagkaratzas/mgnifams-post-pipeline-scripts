@@ -5,5 +5,5 @@ channels:
   - bioconda
 dependencies:
   - conda-forge::python=3.12
-  - conda-forge::plotnine=0.14.5
+  - conda-forge::plotnine=0.15.7
   - conda-forge::pandas=2.2.3
