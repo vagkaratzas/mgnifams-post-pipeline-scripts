@@ -6,7 +6,7 @@ process COVERAGE_FIGURES {
     // plotnine is conda-forge, so there is no biocontainer for it and nothing on
     // depot.galaxyproject.org; these are Seqera community builds of environment.yml.
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/python_plotnine_pandas:2b0b556e61a10ef2' :
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/f8/f8f899a1d83bec6ee80729491e828fcfaeda2628c282e13fc2bd807a96fb8a26/data' :
         'community.wave.seqera.io/library/python_plotnine_pandas:dae7bdcea75615d2' }"
 
     input:
