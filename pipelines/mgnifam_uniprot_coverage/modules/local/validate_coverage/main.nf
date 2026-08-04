@@ -8,7 +8,10 @@ process VALIDATE_COVERAGE {
         'biocontainers/python:3.12' }"
 
     input:
-    tuple val(meta), path(reduced), path(references), val(reference_subsets)
+    // Every subset's reference is the same annotation_percentage_increase.csv by
+    // name, so each one is staged into its own numbered directory. Without that
+    // two subsets collide and the run dies at input staging.
+    tuple val(meta), path(reduced), path(references, stageAs: '?/*'), val(reference_subsets)
 
     output:
     tuple val(meta), path("validation.txt"), emit: ok
