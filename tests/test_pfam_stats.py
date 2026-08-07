@@ -3,6 +3,7 @@ import gzip
 import importlib.util
 import io
 import json
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -266,6 +267,53 @@ def test_combine_sums_counts_but_maxes_hmm_reach():
     assert tot["fam_hmm_max"] == {"PF00462": 55, "PF03960": 99}   # max, not sum
 
 
+def _parts():
+    """Four shard accumulators over disjoint, deliberately uneven rows."""
+    specs = [
+        [("a", "M" * 40, [hit("PF00462", hmm_to=55, s_from=1, s_to=20)])],
+        [("b", "M" * 60, [hit("PF00462", hmm_to=12, s_from=5, s_to=50)]),
+         ("c", "M" * 30, [])],
+        [("d", "M" * 90, [hit("PF03960", hmm_to=46, s_from=1, s_to=45),
+                          hit("PF00462", hmm_to=60, s_from=50, s_to=90)])],
+        [("e", "M" * 25, [])],
+    ]
+    out = []
+    for rows in specs:
+        acc = M.consume([mkrow(i, s, hits=h) for i, s, h in rows], M.blank())
+        acc["fam_hmm_max"] = dict(acc["fam_hmm_max"])
+        out.append(acc)
+    return out
+
+
+def _comparable(t):
+    return {k: (dict(v) if isinstance(v, (Counter, dict)) else v) for k, v in t.items()}
+
+
+def test_incremental_fold_equals_batch_combine():
+    """reduce_stream folds shard-by-shard; it must land on the same totals."""
+    parts = _parts()
+    batch = M.combine(parts)
+    streamed = M.reduce_stream(iter(_parts()), len(parts), total_bytes=1, t0=0.0)
+    assert _comparable(streamed) == _comparable(batch)
+
+
+def test_combine_is_order_independent():
+    """imap_unordered yields shards in completion order, not shard order."""
+    parts = _parts()
+    forward = _comparable(M.combine(parts))
+    for perm in ([3, 1, 0, 2], [2, 0, 3, 1], list(reversed(range(4)))):
+        assert _comparable(M.combine([parts[i] for i in perm])) == forward
+
+
+def test_reduce_stream_logs_progress_and_completion(caplog):
+    with caplog.at_level("INFO", logger="pfam_stats"):
+        M.reduce_stream(iter(_parts()), 4, total_bytes=1 << 20, t0=time.time())
+    messages = [r.getMessage() for r in caplog.records]
+    assert sum("shard" in m for m in messages) == 4, "one progress line per shard"
+    assert messages[0].startswith("shard 1/4")
+    assert messages[-1].startswith("scan complete: 5 sequences, 245 residues")
+
+
 def test_combine_of_one_part_is_that_part():
     acc = M.consume([mkrow("1", "M" * 60, hits=[hit("PF00462")])], M.blank())
     acc["fam_hmm_max"] = dict(acc["fam_hmm_max"])
@@ -346,3 +394,27 @@ def test_report_writes_family_table_and_replayable_counters(tmp_path, capsys):
     assert counters["n_seqs"] == 3
     assert counters["n_with_pfam"] == 2
     assert counters["fam_hmm_max"]["PF00462"] == 60
+
+
+def test_family_table_order_is_reproducible_across_shard_completion_order(tmp_path, capsys):
+    """imap_unordered varies Counter insertion order; ties must break on accession."""
+    tied = ["PF00003", "PF00001", "PF00002"]      # equal sizes, so only the
+    big = "PF00462"                               # tie-break makes order stable
+
+    def part(order):
+        acc = M.blank()
+        for a in order:                           # controls Counter insertion order
+            acc = M.consume([mkrow("x", "M" * 60, hits=[hit(a, s_from=1, s_to=30)])], acc)
+        acc["fam_hmm_max"] = dict(acc["fam_hmm_max"])
+        return acc
+
+    written = []
+    for order in ([big] + tied, tied[::-1] + [big], tied[1:] + [big] + tied[:1]):
+        out = tmp_path / f"o{len(written)}"
+        M.report(M.combine([part(order), part([big])]), str(out))
+        capsys.readouterr()
+        written.append((tmp_path / f"{out.name}_family_sizes.tsv").read_text())
+
+    assert written[0] == written[1] == written[2], "tie order leaked shard arrival order"
+    accs = [ln.split("\t")[0] for ln in written[0].splitlines()[1:]]
+    assert accs == [big] + sorted(tied)           # 2 seqs first, then ties by accession
