@@ -125,6 +125,46 @@ cluster partners, the assessable denominator, order conservation, the `--contigs
 pytest tests/test_synteny_census.py
 ```
 
+## bin/pfam_stats.py
+Pfam-on-MGnify90 baseline statistics for the manuscript: how big Pfam families are on the
+same protein space MGnifams was built from, so `PFAM_MED_SIZE` / `PFAM_IQR_SIZE` /
+`PFAM_MED_LENG` can be quoted like-for-like against the MGnifam numbers.
+
+Single pass over `sequence_explorer_protein.csv` (`mgyp,sequence,full_length,cluster_size,metadata`).
+Only the `"p"` array of the metadata JSON is parsed — it is bracket-matched out of the raw
+string, so the `"s"` block that dominates record size for large clusters is never decoded.
+
+```bash
+python3 bin/pfam_stats.py sequence_explorer_protein.csv -j 32 \
+  --pfam-hmm Pfam-A.38.0.hmm.gz --out-prefix pfam_v38
+```
+
+Self-parallelising: a plain input is split into `4 x --jobs` byte-offset shards handled by one
+worker each, then reduced in-process. Gzipped inputs cannot be offset-sharded, so each `.gz`
+is one worker — pass several (`bin/pfam_stats.py shards/*.csv.gz -j 32`). Byte-offset sharding
+assumes no embedded newlines inside quoted fields, which holds for the sequence and metadata
+columns.
+
+Prints the MGnify90 baseline with the expected totals inline as self-consistency checks
+(sequences, residues, sequences with ≥1 Pfam hit, Pfam-covered residues), Pfam family sizes
+both unfiltered and floored at `MGNIFAM_MIN = 29` (the `>=25`-member seed rule), domain
+architecture context, and the per-sequence Pfam coverage histogram that supports the
+residue-level gain exceeding the sequence-level one. `--pfam-hmm` adds model-length quantiles
+read from `LENG` (or `#=GF ML`), overall and restricted to the families actually matched.
+
+Writes `<prefix>_family_sizes.tsv` (`pfam_acc, n_sequences, n_domains, n_residues, max_hmm_to`)
+and `<prefix>_counters.json`, the raw counters, so the report can be regenerated without
+re-scanning.
+
+No upper cap is applied at the largest observed MGnifam: that maximum is an outcome, not a
+construction constraint, so censoring Pfam there would condition on the result and understate
+Pfam sizes. The count of families exceeding it is reported instead.
+
+Measured: ~125k rows/s/core, ~40 MB/s/core. On the full 200 GB / ~718M-protein table with 32
+cores the run is I/O-bound, not CPU-bound (~1.6 core-hours of parsing). SLURM:
+`--cpus-per-task=32 --mem=32G --time=02:00:00` — the wall-clock request is margin for a slow
+shared filesystem; the scan itself is minutes.
+
 ## bin/make_contig_figure.py
 Renders the `*_maps.txt` output of `synteny_census.py` into one publication-ready,
 600-dpi PNG per contig: gene arrows drawn to scale on a bp axis, coloured by whole-protein
