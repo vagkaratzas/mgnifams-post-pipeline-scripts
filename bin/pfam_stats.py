@@ -23,6 +23,7 @@ import time
 import logging
 import argparse
 import datetime
+import contextlib
 import multiprocessing as mp
 from collections import defaultdict, Counter
 
@@ -374,6 +375,21 @@ def hms(seconds):
     return str(datetime.timedelta(seconds=int(seconds)))
 
 
+class Tee:
+    """Write-through to several streams; the stdlib has no tee for text IO."""
+
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, s):
+        for st in self.streams:
+            st.write(s)
+
+    def flush(self):
+        for st in self.streams:
+            st.flush()
+
+
 def reduce_stream(results, n_shards, total_bytes, t0):
     """Fold shard accumulators as they arrive, logging progress.
 
@@ -401,7 +417,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('inputs', nargs='+')
     ap.add_argument('-j', '--jobs', type=int, default=os.cpu_count())
-    ap.add_argument('--out-prefix', default='pfam')
+    ap.add_argument('-o', '--outdir', default='.',
+                    help='directory for all outputs (created if absent)')
+    ap.add_argument('--out-prefix', default='pfam', help='basename prefix within --outdir')
     ap.add_argument('--pfam-hmm', help='Pfam-A.hmm or Pfam-A.hmm.dat, for model lengths')
     ap.add_argument('--log-level', default='INFO',
                     choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'])
@@ -413,10 +431,13 @@ def main():
                         datefmt='%Y-%m-%d %H:%M:%S')
 
     t0 = time.time()
+    os.makedirs(a.outdir, exist_ok=True)
+    prefix = os.path.join(a.outdir, a.out_prefix)   # every artefact hangs off this
     total_bytes = sum(os.path.getsize(p) for p in a.inputs)
     tasks = build_tasks(a.inputs, a.jobs)
-    log.info('start: %d input(s), %.2f GiB, %d shards, %d workers',
-             len(a.inputs), total_bytes / (1 << 30), len(tasks), a.jobs)
+    log.info('start: %d input(s), %.2f GiB, %d shards, %d workers -> %s',
+             len(a.inputs), total_bytes / (1 << 30), len(tasks), a.jobs,
+             os.path.abspath(a.outdir))
 
     if a.jobs == 1:
         tot = reduce_stream((worker(t) for t in tasks), len(tasks), total_bytes, t0)
@@ -425,12 +446,17 @@ def main():
             tot = reduce_stream(pool.imap_unordered(worker, tasks, chunksize=1),
                                 len(tasks), total_bytes, t0)
 
-    report(tot, a.out_prefix)
-    if a.pfam_hmm:
-        log.info('reading model lengths from %s', a.pfam_hmm)
-        report_leng(tot, read_pfam_leng(a.pfam_hmm))
-    log.info('done in %s | wrote %s_family_sizes.tsv and %s_counters.json',
-             hms(time.time() - t0), a.out_prefix, a.out_prefix)
+    # the report goes to stdout as before, and to a file so --outdir holds everything
+    with open(f'{prefix}_report.txt', 'w') as fh, \
+            contextlib.redirect_stdout(Tee(sys.stdout, fh)):
+        report(tot, prefix)
+        if a.pfam_hmm:
+            log.info('reading model lengths from %s', a.pfam_hmm)
+            report_leng(tot, read_pfam_leng(a.pfam_hmm))
+
+    log.info('done in %s | wrote %s', hms(time.time() - t0), ', '.join(
+        os.path.basename(f'{prefix}{s}')
+        for s in ('_report.txt', '_family_sizes.tsv', '_counters.json')))
 
 
 if __name__ == '__main__':

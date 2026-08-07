@@ -3,6 +3,8 @@ import gzip
 import importlib.util
 import io
 import json
+import subprocess
+import sys
 import time
 from collections import Counter
 from pathlib import Path
@@ -394,6 +396,36 @@ def test_report_writes_family_table_and_replayable_counters(tmp_path, capsys):
     assert counters["n_seqs"] == 3
     assert counters["n_with_pfam"] == 2
     assert counters["fam_hmm_max"]["PF00462"] == 60
+
+
+def test_outdir_collects_every_artefact_and_is_created_on_demand(tmp_path):
+    """--outdir must hold the report, the family table and the counters."""
+    p = tmp_path / "in.csv"
+    write_csv(p, [mkrow("1", "M" * 60, hits=[hit("PF00462")]),
+                  mkrow("2", "M" * 40, hits=[hit("PF03960")])])
+    outdir = tmp_path / "nested" / "results"        # does not exist yet
+
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), str(p), "-j", "1",
+         "-o", str(outdir), "--out-prefix", "run1"],
+        capture_output=True, text=True, check=True)
+
+    assert sorted(f.name for f in outdir.iterdir()) == [
+        "run1_counters.json", "run1_family_sizes.tsv", "run1_report.txt"]
+    assert json.loads((outdir / "run1_counters.json").read_text())["n_seqs"] == 2
+    # the report is tee'd, so the file and stdout must agree
+    assert (outdir / "run1_report.txt").read_text() == proc.stdout
+    assert "MGnify90 baseline" in proc.stdout
+    assert "done in" in proc.stderr                 # log stays on stderr
+
+
+def test_outdir_defaults_to_cwd(tmp_path):
+    p = tmp_path / "in.csv"
+    write_csv(p, [mkrow("1", "M" * 60, hits=[hit("PF00462")])])
+    subprocess.run([sys.executable, str(SCRIPT), str(p), "-j", "1"],
+                   cwd=tmp_path, capture_output=True, text=True, check=True)
+    assert (tmp_path / "pfam_report.txt").exists()
+    assert (tmp_path / "pfam_family_sizes.tsv").exists()
 
 
 def test_family_table_order_is_reproducible_across_shard_completion_order(tmp_path, capsys):
