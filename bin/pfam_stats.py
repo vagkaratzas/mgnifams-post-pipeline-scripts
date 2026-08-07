@@ -143,7 +143,9 @@ def worker(task):
     else:
         with open(path, 'rb') as fh:
             if start:
-                fh.seek(start)
+                # seek one byte back: if start is itself a line start, the
+                # preceding '\n' is consumed alone and no record is dropped.
+                fh.seek(start - 1)
                 fh.readline()            # discard partial line
             buf = []
             pos = fh.tell()
@@ -352,7 +354,9 @@ def build_tasks(paths, jobs):
             tasks.append((p, None, None))
             continue
         size = os.path.getsize(p)
-        n = max(1, min(jobs, size // (32 << 20) or 1))
+        # 4 shards per worker so a shard dense in short (parse-heavy) rows
+        # does not become the wall-clock tail
+        n = max(1, min(jobs * 4, size // (32 << 20) or 1))
         step = size // n
         for i in range(n):
             tasks.append((p, i * step, size if i == n - 1 else (i + 1) * step))
