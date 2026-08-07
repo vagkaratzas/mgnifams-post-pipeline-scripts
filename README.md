@@ -136,8 +136,13 @@ string, so the `"s"` block that dominates record size for large clusters is neve
 
 ```bash
 python3 bin/pfam_stats.py sequence_explorer_protein.csv -j 32 \
-  --pfam-hmm Pfam-A.38.0.hmm.gz --out-prefix pfam_v38
+  --pfam-hmm Pfam-A.38.0.hmm.gz -o results/pfam_v38 --out-prefix pfam_v38
 ```
+
+`-o/--outdir` (default `.`, created if absent) collects every artefact, named `<out-prefix>_*`:
+`_report.txt`, `_family_sizes.tsv` (`pfam_acc, n_sequences, n_domains, n_residues, max_hmm_to`)
+and `_counters.json`, the raw counters, so the report can be regenerated without re-scanning.
+The report is written to the file *and* stdout, so redirecting still works.
 
 Self-parallelising: a plain input is split into `4 x --jobs` byte-offset shards handled by one
 worker each, then reduced in-process. Gzipped inputs cannot be offset-sharded, so each `.gz`
@@ -152,24 +157,20 @@ architecture context, and the per-sequence Pfam coverage histogram that supports
 residue-level gain exceeding the sequence-level one. `--pfam-hmm` adds model-length quantiles
 read from `LENG` (or `#=GF ML`), overall and restricted to the families actually matched.
 
-Writes `<prefix>_family_sizes.tsv` (`pfam_acc, n_sequences, n_domains, n_residues, max_hmm_to`)
-and `<prefix>_counters.json`, the raw counters, so the report can be regenerated without
-re-scanning.
-
 No upper cap is applied at the largest observed MGnifam: that maximum is an outcome, not a
 construction constraint, so censoring Pfam there would condition on the result and understate
 Pfam sizes. The count of families exceeding it is reported instead.
 
-Progress goes to **stderr** via `logging`, the report to **stdout**, so a SLURM run splits into
-`... > pfam_report.txt 2> pfam_run.log`. One line per shard as it completes (running sequence
+Progress goes to **stderr** via `logging` (the run log is the one thing not placed in `--outdir`;
+point SLURM's `--error` at it). One line per shard as it completes (running sequence
 count, throughput, elapsed, ETA), then a `scan complete` line and a final `done in H:MM:SS`
 marker to grep for. `--log-level` controls verbosity.
 
 ```
-2026-08-07 10:57:58 INFO start: 1 input(s), 0.25 GiB, 7 shards, 8 workers
-2026-08-07 10:58:00 INFO shard 1/7 (14.3%) | 120,633 seqs | 63,310 seqs/s | elapsed 0:00:01 | eta 0:00:11
-2026-08-07 10:58:01 INFO scan complete: 800,000 sequences, 149,678,224 residues in 0:00:02 (278,234 seqs/s, 88 MiB/s)
-2026-08-07 10:58:01 INFO done in 0:00:02 | wrote L8_family_sizes.tsv and L8_counters.json
+2026-08-07 11:24:56 INFO start: 1 input(s), 0.25 GiB, 7 shards, 8 workers -> /abs/path/results/pfam_v38
+2026-08-07 11:24:57 INFO shard 1/7 (14.3%) | 120,633 seqs | 63,310 seqs/s | elapsed 0:00:01 | eta 0:00:11
+2026-08-07 11:24:59 INFO scan complete: 800,000 sequences, 149,678,224 residues in 0:00:02 (274,157 seqs/s, 87 MiB/s)
+2026-08-07 11:25:09 INFO done in 0:00:13 | wrote pfam_v38_report.txt, pfam_v38_family_sizes.tsv, pfam_v38_counters.json
 ```
 
 Shards are folded as they arrive, so the parent never holds all of them and output is byte-identical
