@@ -19,11 +19,16 @@ import os
 import csv
 import json
 import gzip
+import time
+import logging
 import argparse
+import datetime
 import multiprocessing as mp
 from collections import defaultdict, Counter
 
 csv.field_size_limit(1 << 31)
+
+log = logging.getLogger('pfam_stats')
 
 MGNIFAM_MIN = 29          # smallest MGnifam, from the >=25-member seed rule
 MGNIFAM_MAX = 1_515_677   # largest MGnifam observed (reported, never applied)
@@ -276,7 +281,9 @@ def report(t, prefix):
     fn = f'{prefix}_family_sizes.tsv'
     with open(fn, 'w') as out:
         out.write('pfam_acc\tn_sequences\tn_domains\tn_residues\tmax_hmm_to\n')
-        for a in sorted(t['fam_seqs'], key=lambda x: -t['fam_seqs'][x]):
+        # accession breaks ties: shards complete out of order, so insertion
+        # order into the Counter is not reproducible between runs
+        for a in sorted(t['fam_seqs'], key=lambda x: (-t['fam_seqs'][x], x)):
             out.write(f'{a}\t{t["fam_seqs"][a]}\t{t["fam_doms"][a]}\t'
                       f'{t["fam_res"][a]}\t{t["fam_hmm_max"].get(a, 0)}\n')
     P(f'\nper-family table -> {fn}')
@@ -363,25 +370,67 @@ def build_tasks(paths, jobs):
     return tasks
 
 
+def hms(seconds):
+    return str(datetime.timedelta(seconds=int(seconds)))
+
+
+def reduce_stream(results, n_shards, total_bytes, t0):
+    """Fold shard accumulators as they arrive, logging progress.
+
+    Incremental so the parent never holds all `n_shards` accumulators at once,
+    and so a long SLURM run reports progress instead of going quiet for minutes.
+    """
+    tot = blank()
+    tot['fam_hmm_max'] = {}
+    for done, part in enumerate(results, 1):
+        tot = combine([tot, part])
+        el = time.time() - t0
+        frac = done / n_shards
+        log.info('shard %d/%d (%4.1f%%) | %s seqs | %s seqs/s | elapsed %s | eta %s',
+                 done, n_shards, 100 * frac, f'{tot["n_seqs"]:,}',
+                 f'{tot["n_seqs"] / el:,.0f}' if el else '-',
+                 hms(el), hms(el / frac - el))
+    el = max(time.time() - t0, 1e-9)
+    log.info('scan complete: %s sequences, %s residues in %s (%s seqs/s, %.0f MiB/s)',
+             f'{tot["n_seqs"]:,}', f'{tot["n_residues"]:,}', hms(el),
+             f'{tot["n_seqs"] / el:,.0f}', total_bytes / el / (1 << 20))
+    return tot
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('inputs', nargs='+')
     ap.add_argument('-j', '--jobs', type=int, default=os.cpu_count())
     ap.add_argument('--out-prefix', default='pfam')
     ap.add_argument('--pfam-hmm', help='Pfam-A.hmm or Pfam-A.hmm.dat, for model lengths')
+    ap.add_argument('--log-level', default='INFO',
+                    choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'])
     a = ap.parse_args()
 
+    # stderr, so stdout stays the report:  ... > report.txt 2> run.log
+    logging.basicConfig(level=getattr(logging, a.log_level), stream=sys.stderr,
+                        format='%(asctime)s %(levelname)s %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
+
+    t0 = time.time()
+    total_bytes = sum(os.path.getsize(p) for p in a.inputs)
     tasks = build_tasks(a.inputs, a.jobs)
-    sys.stderr.write(f'{len(tasks)} shards across {a.jobs} workers\n')
+    log.info('start: %d input(s), %.2f GiB, %d shards, %d workers',
+             len(a.inputs), total_bytes / (1 << 30), len(tasks), a.jobs)
+
     if a.jobs == 1:
-        parts = [worker(t) for t in tasks]
+        tot = reduce_stream((worker(t) for t in tasks), len(tasks), total_bytes, t0)
     else:
         with mp.Pool(a.jobs) as pool:
-            parts = pool.map(worker, tasks, chunksize=1)
-    tot = combine(parts)
+            tot = reduce_stream(pool.imap_unordered(worker, tasks, chunksize=1),
+                                len(tasks), total_bytes, t0)
+
     report(tot, a.out_prefix)
     if a.pfam_hmm:
+        log.info('reading model lengths from %s', a.pfam_hmm)
         report_leng(tot, read_pfam_leng(a.pfam_hmm))
+    log.info('done in %s | wrote %s_family_sizes.tsv and %s_counters.json',
+             hms(time.time() - t0), a.out_prefix, a.out_prefix)
 
 
 if __name__ == '__main__':
