@@ -50,6 +50,9 @@ import matplotlib
 
 matplotlib.use("Agg")  # headless: never open a GUI canvas while composing panels
 import matplotlib.font_manager as fm
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+from matplotlib.textpath import TextPath
 from plotnine import (aes, element_blank, element_line, element_rect, element_text, geom_col,
                       geom_text, ggplot, labs, scale_fill_manual, scale_y_continuous, theme,
                       theme_minimal)
@@ -61,12 +64,13 @@ TEXT_SIZE_PT = 8            # one size for EVERY text element: axes, ticks, lege
 FONT_STACK = ("Times New Roman", "Nimbus Roman", "Liberation Serif", "DejaVu Serif")
 
 WIDTH_MM = 180              # double column: ~20 binned categories + in-bar counts need the width
-PANEL_HEIGHT_MM = 55        # per panel; the combined figure is n_panels x this
-PREVIEW_DPI = 300           # raster preview only; the PDF is the deliverable
+PANEL_HEIGHT_MM = 65        # per panel; the combined figure is n_panels x this
+PREVIEW_DPI = 600           # raster preview at journal resolution; the PDF is the deliverable
 BAR_WIDTH = 0.75            # fraction of the category slot
 LINE_WIDTH_MM = 0.2         # grid lines / bar outlines: thinner than the data
-LABEL_PAD_FRAC = 0.02       # gap between a bar top and its percentage label, as a fraction of y-max
-HEADROOM_FRAC = 0.18        # y-axis headroom above the tallest bar, so labels are not clipped
+LABEL_PAD_MM = 0.5          # clearance a label needs inside a segment, beyond its own glyphs
+STACK_GAP_MM = 1.5          # gap between the labels stacked above a bar, so they read apart
+HEADROOM_FRAC = 0.04        # minimum y-axis headroom; the layout grows this to fit above-bar labels
 
 # Discrete color -- Bang Wong colorblind-safe palette, used in its fixed order.
 WONG = ["#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#D55E00", "#F0E442", "#0072B2", "#000000"]
@@ -80,12 +84,12 @@ LEGEND_KEY_PT = 10          # legend glyphs only; legend text stays at TEXT_SIZE
 # status above), so these are declared and unused.
 CONTINUOUS_CMAP = "viridis"
 
-# A bar shorter than this fraction of the tallest bar cannot hold a horizontal percentage label
-# without colliding with its neighbours, so that label is rotated upright instead of dropped --
-# every bin reports its novel share, however few families it holds.
-SMALL_BAR_FRAC = 0.025
-# A stacked segment thinner than this cannot fit its count inside the bar at TEXT_SIZE_PT.
-COUNT_LABEL_MIN_FRAC = 0.06
+# Every number is placed by measuring it: a count sits inside its segment only when the rendered
+# glyphs fit the segment in both directions (horizontally if it can, upright if only that fits),
+# and anything that does not fit is stacked upright above the bar instead of being dropped or
+# spilled across its neighbours. LAYOUT_PASSES re-runs that layout after the y-axis has grown to
+# hold the stacks, since taller axes shrink every segment in mm and can push one more label out.
+LAYOUT_PASSES = 4
 # ----------------------------------------------------------------------------------------
 
 
@@ -230,32 +234,97 @@ def bin_counts(df, value_col, bin_size, log=False, right_closed=False,
     return tidy
 
 
-def build_panel(tidy, x_label, tag=None, legend=True):
-    """One stacked barplot. No title -- context goes in the manuscript caption."""
-    y_max = tidy["total"].max()
+@functools.lru_cache(maxsize=None)
+def text_size_mm(text):
+    """Rendered width and height of `text` in mm, at TEXT_SIZE_PT in the figure font."""
+    prop = FontProperties(family=FONT_FAMILY, size=TEXT_SIZE_PT)
+    extents = TextPath((0, 0), text, size=TEXT_SIZE_PT, prop=prop).get_extents()
+    return extents.width / 72 * 25.4, extents.height / 72 * 25.4
 
-    # counts inside a segment only where the segment is thick enough to hold them
-    in_bar = tidy[tidy["count"] >= COUNT_LABEL_MIN_FRAC * y_max].copy()
-    in_bar["label"] = in_bar["count"].map("{:,}".format)
 
-    # every bar gets its novel share, however short -- upright on bars too narrow for a
-    # horizontal label, so nothing collides and no bin goes unlabelled
-    tops = tidy[tidy["status"] == NOVEL].copy()
-    tops["label"] = tops["pct"].map("{:.1f}%".format)
-    tops["y"] = tops["total"] + LABEL_PAD_FRAC * y_max
-    wide = tops[tops["total"] >= SMALL_BAR_FRAC * y_max]
-    narrow = tops[tops["total"] < SMALL_BAR_FRAC * y_max]
+def panel_area_mm(tidy, x_label, height_mm):
+    """Width and height of the drawn plotting area, measured from a throwaway render.
 
+    Label placement is a question about millimetres (does '10,357' fit across a 5 mm bar?),
+    so it needs the real panel geometry rather than a guess at how much of the figure the
+    rotated tick labels and axis titles consume. Measured with the legend on, which is the
+    shortest the panel ever gets, so a label that fits here fits in the legend-less panels too.
+    """
+    plot = (base_panel(tidy, x_label, legend=True)
+            + theme(figure_size=(WIDTH_MM / 25.4, height_mm / 25.4)))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        fig = plot.draw(show=False)
+        fig.canvas.draw()  # the panel only shrinks to fit the tick labels once it is rendered
+    box = fig.axes[0].get_position()
+    plt.close(fig)
+    return box.width * WIDTH_MM, box.height * height_mm
+
+
+def layout_labels(tidy, plot_w_mm, plot_h_mm, y_top):
+    """Place every count and percentage; return (label rows, y the tallest stack reaches).
+
+    Per bar: each count goes inside its own segment when the text fits there (horizontal if it
+    can, upright if only that orientation fits), otherwise it joins the upright stack above the
+    bar. The novel percentage always sits on top of that stack -- horizontal when it fits the
+    category slot, upright when a horizontal one would run into the neighbouring bar.
+    """
+    units_per_mm = y_top / plot_h_mm
+    bar_mm = BAR_WIDTH * plot_w_mm / tidy["bin"].nunique()
+
+    rows, y_reach = [], 0.0
+    for bin_label, group in tidy.groupby("bin", observed=True):
+        indexed = group.set_index("status")
+        total = indexed["count"].sum()
+        stack = []  # labels that did not fit inside, bottom-to-top
+
+        for status in (ANNOTATED, NOVEL):
+            segment = indexed.loc[status]
+            if segment["count"] == 0:
+                continue
+            label = f"{segment['count']:,}"
+            w, h = text_size_mm(label)
+            segment_mm = segment["count"] / units_per_mm
+            fits = lambda across, along: (across + LABEL_PAD_MM <= bar_mm  # noqa: E731
+                                          and along + LABEL_PAD_MM <= segment_mm)
+            if fits(w, h):
+                angle = 0
+            elif fits(h, w):
+                angle = 90
+            else:
+                stack.append(label)
+                continue
+            rows.append(dict(bin=bin_label, y=segment["mid"], label=label,
+                             angle=angle, va="center"))
+
+        stack.append(f"{indexed.loc[NOVEL, 'pct']:.1f}%")
+        y = total + STACK_GAP_MM * units_per_mm
+        if len(stack) == 1 and text_size_mm(stack[0])[0] + LABEL_PAD_MM <= bar_mm / BAR_WIDTH:
+            w, h = text_size_mm(stack[0])
+            rows.append(dict(bin=bin_label, y=y, label=stack[0], angle=0, va="bottom"))
+            y_reach = max(y_reach, y + h * units_per_mm)
+            continue
+        for label in stack:  # upright, so a stack is never wider than the bar it sits on
+            w, _ = text_size_mm(label)
+            rows.append(dict(bin=bin_label, y=y, label=label, angle=90, va="bottom"))
+            y = y + (w + STACK_GAP_MM) * units_per_mm
+            y_reach = max(y_reach, y)
+
+    return pd.DataFrame(rows), y_reach
+
+
+def base_panel(tidy, x_label, tag=None, legend=True, y_top=None):
+    """The bars, scales and theme -- everything except the number labels.
+
+    y_top pins the axis top outright rather than expanding by a fraction: the label positions
+    are themselves data, so a multiplicative expansion would stretch the axis past the height
+    the labels were placed against and squeeze every gap the layout just measured out.
+    """
+    limits = (0, y_top) if y_top else None
     return (ggplot()
             + geom_col(tidy, aes("bin", "count", fill="status"), width=BAR_WIDTH)
-            + geom_text(in_bar, aes("bin", "mid", label="label"),
-                        size=TEXT_SIZE_PT, color=LABEL_COLOR)
-            + geom_text(wide, aes("bin", "y", label="label"),
-                        size=TEXT_SIZE_PT, color=LABEL_COLOR, va="bottom")
-            + geom_text(narrow, aes("bin", "y", label="label"), size=TEXT_SIZE_PT,
-                        color=LABEL_COLOR, va="bottom", ha="center", angle=90)
             + scale_fill_manual(values=FILL_COLORS, breaks=[ANNOTATED, NOVEL])
-            + scale_y_continuous(expand=(0, 0, HEADROOM_FRAC, 0),
+            + scale_y_continuous(limits=limits, expand=(0, 0, 0 if y_top else HEADROOM_FRAC, 0),
                                  labels=lambda breaks: [f"{b:,.0f}" for b in breaks])
             + labs(x=x_label, y="Number of families", tag=tag)
             + theme_minimal()
@@ -275,17 +344,51 @@ def build_panel(tidy, x_label, tag=None, legend=True):
             ))
 
 
+def build_panel(tidy, x_label, tag=None, legend=True, height_mm=PANEL_HEIGHT_MM):
+    """One stacked barplot, every number placed to fit. No title -- context goes in the caption.
+
+    The y-axis is grown to whatever the tallest above-bar stack needs, and the layout is then
+    recomputed on the taller axis (a taller axis means fewer mm per family, which can push one
+    more count out of its segment), repeating until the height settles.
+    """
+    plot_w_mm, plot_h_mm = panel_area_mm(tidy, x_label, height_mm)
+    y_max = tidy["total"].max()
+
+    # Iterate to a fixed point, then lay the labels out once more on the axis they are actually
+    # drawn against: a label placed for a shorter axis would have its gaps squeezed by the
+    # rescale, which is exactly the crowding this layout exists to avoid.
+    y_top = y_max * (1 + HEADROOM_FRAC)
+    for _ in range(LAYOUT_PASSES):
+        _, y_reach = layout_labels(tidy, plot_w_mm, plot_h_mm, y_top)
+        settled = y_reach + STACK_GAP_MM * y_top / plot_h_mm
+        if settled <= y_top:
+            break
+        y_top = settled
+    labels, _ = layout_labels(tidy, plot_w_mm, plot_h_mm, y_top)
+
+    layers = [geom_text(group, aes("bin", "y", label="label"), size=TEXT_SIZE_PT,
+                        color=LABEL_COLOR, angle=angle, va=va, ha="center")
+              for (angle, va), group in labels.groupby(["angle", "va"])]
+
+    return functools.reduce(operator.add, layers,
+                            base_panel(tidy, x_label, tag, legend, y_top))
+
+
 def save_figure(make_plot, path_no_ext, height_mm):
-    """Vector PDF (the deliverable) plus a raster preview for quick eyeballing.
+    """Vector PDF (the deliverable) plus a journal-resolution raster preview.
 
     Takes a factory, not a plot: drawing a composition consumes its layout registry, so a
     second save of the same object raises. Each format gets a freshly built figure.
+
+    The size is set through the theme rather than save(width=, height=): a composition of
+    panels ignores those arguments and would otherwise fall back to matplotlib's default
+    6.4 x 4.8 in canvas, shrinking every panel out of the geometry the labels were placed for.
     """
+    size = theme(figure_size=(WIDTH_MM / 25.4, height_mm / 25.4))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        for ext, kwargs in (("pdf", {}), ("png", {"dpi": PREVIEW_DPI})):
-            make_plot().save(f"{path_no_ext}.{ext}", width=WIDTH_MM, height=height_mm,
-                             units="mm", verbose=False, **kwargs)
+        for ext in ("pdf", "png"):
+            (make_plot() + size).save(f"{path_no_ext}.{ext}", dpi=PREVIEW_DPI, verbose=False)
     print(f"Saved: {path_no_ext}.pdf (+ .png preview)")
 
 
