@@ -21,6 +21,72 @@ derived category lists, the validation checks and measured resource use. The map
 lives at `pipelines/mgnifam_uniprot_coverage/bin/mgnifam_uniprot_coverage_stats_from_domtbl.py`
 and is usable standalone (`map` / `reduce` subcommands) for one-off work.
 
+## bin/rebuild_full_msas.py
+Rebuilds the released full MSAs with the released HMMs, fixing the exit-branch bug in the
+legacy pipeline.
+
+`bin/generate_families.py` exports a family HMM built with `hmmbuild --hand` from the final
+seed alignment (`:547`), but recruits (`:549`) and aligns (`:574`) the full MSA with the
+previous round's `fast` model. **The shipped HMM is not the model that produced the shipped
+full MSA** — on a 9-family test set, 4 alignments had a match-column count that disagreed with
+their HMM's `LENG`, and after the rebuild 5 families changed size and 4 changed representative.
+
+Needs only the released HMM library and the pipeline's own search database. Search, hit
+filtering, alignment and renumbering are imported from `mgnifam.generate_families` (the fixed
+standalone package) so the output cannot drift from the pipeline's semantics; the exit-branch
+recruitment rule is reproduced exactly (E-value only, envelope-length filter waived, envelopes
+masked out of their record, rows in HMMER ranking order).
+
+```bash
+/home/vangelis/Desktop/Projects/mgnifam/.venv/bin/python bin/rebuild_full_msas.py \
+  --hmm_lib mgnifams_hmm.lib.gz \
+  --fasta output/mgnifams_v2.fa \
+  --outdir full_msa_fixed \
+  --old_full_msa_dir output/generate_families/families/full_msa_sto \
+  --cpus 8 --gzip_output
+```
+
+`--fasta` must be the pipeline's own search database (`SETUP_CLUSTERS.out.mgnifams_input_fa`,
+e.g. `output/mgnifams_v2.fa`), uncompressed — **not** the raw MGnify protein FASTA. Recruitment
+is only comparable against the database the release was built from. Python **3.13** only, so run
+it with mgnifam's interpreter; `--self_test` runs a built-in end-to-end check.
+
+Writes `full_msa/<id>.sto[.gz]` and `mgnifam_updates.csv`:
+
+```
+id,status,hmm_length,full_size,protein_rep,rep_region,rep_length,rep_sequence,
+match_columns,note,old_full_size,old_match_columns,old_hmm_mismatch,old_rep,size_changed,rep_changed
+```
+
+The `rep_*` values are derived as legacy `renumber_sto_msa` derived them — row 0, ungapped,
+upper-cased, region from the `/start-end` suffix (`-` for a whole protein). `consensus` and
+`converged` are deliberately absent: both come from the HMM and the seed loop, and neither is
+re-run. Exits `1` if any rebuilt family's RF columns still disagree with its HMM's `LENG`.
+
+Out of scope: the seed/redundancy loop (seed MSAs, RF lines and HMMs are unchanged), the
+membership check (`--discard_min_starting_membership` needs cluster members, unrecoverable from
+an HMM), and `biome_blob` / `domain_blob`, which `update_mgnifams_db` builds from
+`refined_families.tsv` and which go stale for every family whose membership moved.
+
+## bin/update_mgnifam_db_full_msa_bug.py
+Applies `bin/rebuild_full_msas.py`'s `mgnifam_updates.csv` to the `mgnifam` table of the website
+SQLite DB. Stdlib only — plain `python3` is enough.
+
+```bash
+python bin/update_mgnifam_db_full_msa_bug.py --csv full_msa_fixed/mgnifam_updates.csv --sqlite mgnifams.sqlite3
+python bin/update_mgnifam_db_full_msa_bug.py --csv full_msa_fixed/mgnifam_updates.csv --sqlite mgnifams.sqlite3 --apply
+```
+
+Previews by default, printing how many rows each column changes; `--apply` is what writes, and
+it copies the database to `<db>.bak` first (`--no_backup` opts out). Rows with `status` other
+than `rebuilt` are skipped — a family whose alignment could not be regenerated keeps its
+released values rather than being blanked. A CSV missing a column, or carrying an empty value
+for one, is refused rather than half-applied.
+
+Columns written: `full_size`, `protein_rep`, `rep_region`, `rep_length`, `rep_sequence` —
+everything the re-recruitment can move. Not `consensus` or `converged`. Narrow the set with
+`--columns`; `--self_test` runs a built-in check against a throwaway database.
+
 ## bin/synteny_census.py
 Gene-neighbourhood / synteny analysis for an MGnifam family, against the MGnify proteins
 parquet store queried with DuckDB.
