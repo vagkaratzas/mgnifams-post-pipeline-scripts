@@ -55,6 +55,44 @@ neither search sees those, and without them there is no denominator for a percen
 its own file, and when every subset has one the pooled UniProtKB view is checked against their
 sum. Subsets without a reference still get every internal-consistency check.
 
+### Rescaling to one search space (no re-run)
+
+The SwissProt and TrEMBL MGnifams searches were pinned to different `-Z`/`--domZ`
+(575,503 and 149,234,636), so the same E < 0.001 cutoff meant a ~260× looser bit-score
+threshold on SwissProt. HMMER computes full-sequence E = P × Z and c-Evalue = P_dom × domZ,
+and both searches set `-Z = --domZ`. So every E-value maps onto the combined search space
+(149,810,139) by one factor per subset, `target_z / search_z`. A larger Z only removes
+hits, so the existing domtbls already contain everything a combined search would report.
+
+Add a `search_z` column, drop `reference_csv` (the references describe the unscaled
+searches; the pipeline refuses both together), and pass `--target_z`:
+
+```csv
+subset,mgnifams_domtbl_dir,pfam_domtbl_dir,total_sequences,total_residues,n_chunks,search_z
+swissprot,/nfs/.../swissprot/hmmsearch_mgnifams,/nfs/.../swissprot/hmmsearch_pfams,575503,208906902,1,575503
+trembl,/nfs/.../trembl/hmmsearch_mgnifams,/nfs/.../trembl/hmmsearch_pfams,149234636,58049358499,150,149234636
+```
+
+```bash
+nextflow run main.nf -profile singularity --input samplesheet_rescale.csv \
+  --target_z 149810139 --lists_dir ... --mgnifams_hmm ... --outdir results_rescaled
+# test: -profile test,singularity --input assets/test_data/samplesheet_rescale.csv --target_z 149810139
+```
+
+The MGnifams map passes then keep a row only if its rescaled full-sequence E **and**
+c-Evalue are ≤ `--max_evalue` (0.001), which is what `hmmsearch -E/--domE` would have
+reported. Pfam passes (`--cut_ga`, bit scores) are untouched. Each map log reports
+`rescale dropped=N borderline=M`. Domtbl prints E-values to 2 significant digits, so
+`borderline` counts rows within 5% of the cutoff that could fall either way.
+
+### Pfam gathering thresholds as E-values
+
+`bin/pfam_ga_evalue_ceiling.py` is standalone, not part of the DAG. It rescales the Pfam
+`--cut_ga` domtbls (no `-Z`: Z = chunk size) onto `--target-z`, then reports per family
+the largest full-sequence E and i-Evalue among GA-passing hits, plus how many families
+exceed the MGnifams cutoff. This tests whether GA really is stricter than E < 0.001.
+See `--help`.
+
 ### Parameters
 
 | Param | Default | Meaning |
@@ -63,6 +101,8 @@ sum. Subsets without a reference still get every internal-consistency check.
 | `--lists_dir` | — | directory of curated `*.txt` MGnifam category lists |
 | `--mgnifams_hmm` | — | HMM library; `hmmstat` gives the library-size denominator |
 | `--coords` | `['ali','env']` | alignment coordinates reproduce the published figures, envelope is the sensitivity check |
+| `--target_z` | `null` | rescale MGnifams E-values onto this search space (needs a `search_z` column) |
+| `--max_evalue` | `0.001` | cutoff applied after the rescale |
 
 ## What it does
 
@@ -158,6 +198,7 @@ mgnifam_uniprot_coverage/
 │   ├── coverage_report.py
 │   ├── coverage_figures.py
 │   ├── provenance_report.py
+│   ├── pfam_ga_evalue_ceiling.py                       # standalone: GA as E-values
 │   └── tests/
 └── modules/local/{build_category_lists,coverage_map,coverage_reduce,
                    validate_coverage,coverage_report,coverage_figures,provenance_report}/
