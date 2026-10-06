@@ -38,7 +38,17 @@ workflow {
                 n_chunks        : row.n_chunks as int,
                 // optional per-subset annotation_percentage_increase.csv
                 reference       : row.reference_csv ? resolveDir(sheet_dir, row.reference_csv) : null,
+                // optional: the -Z/--domZ the MGnifams search of this subset was pinned to
+                search_z        : row.search_z ? row.search_z as long : null,
             ]
+        }
+        .map { s ->
+            if( !params.target_z ) return s + [ evalue_scale: null ]
+            // E = P x Z, so the pinned search maps onto target_z by one factor per subset
+            if( !s.search_z ) error "--target_z needs a search_z column value for subset '${s.subset}'"
+            // references describe the search as run; after the rescale they cannot match
+            if( s.reference ) error "--target_z: drop reference_csv for subset '${s.subset}', it describes the unscaled search"
+            s + [ evalue_scale: (params.target_z as double) / s.search_z ]
         }
 
     ch_lists_dir = channel.value( file(params.lists_dir,    checkIfExists: true) )
@@ -82,6 +92,7 @@ workflow {
                 total_sequences: s.total_sequences,
                 total_residues : s.total_residues,
                 n_chunks       : s.n_chunks,
+                evalue_scale   : s.evalue_scale,
             ]
             [ meta, mg, pfam ]
         }

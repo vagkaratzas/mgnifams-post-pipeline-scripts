@@ -129,3 +129,58 @@ def test_map_refuses_a_missing_mask(chunk, tmp_path):
     assert proc.returncode != 0
     # the whole point: it must not fall through to plain total coverage
     assert "refusing to report total coverage as exclusive" in proc.stderr
+
+
+# ------------------------------------------------- -Z/--domZ E-value rescale
+
+def scaled_row(target, seq_e, dom_ce):
+    """A domtbl row with chosen full-sequence E and conditional domain E."""
+    return " ".join(str(x) for x in [
+        target, "-", 200, "444", "-", 100, seq_e, 50.0, 0.0, 1, 1,
+        dom_ce, dom_ce, 50.0, 0.0, 1, 100, 10, 60, 10, 60, 0.9, "desc",
+    ])
+
+
+def mapped_targets(outdir):
+    rows = outdir.glob("*.pertarget.tsv.gz")
+    import gzip
+    return {line.split("\t")[0]
+            for path in rows for line in gzip.open(path, "rt").read().splitlines()[1:]}
+
+
+def test_evalue_rescale_keeps_only_rows_hmmsearch_would_report(tmp_path):
+    domtbl = tmp_path / "uniprot_test_chunk_000001_mgnifams.domtbl"
+    domtbl.write_text("\n".join([
+        scaled_row("keep", "1e-7", "1e-7"),         # x100 -> 1e-5, both pass
+        scaled_row("seq_fails", "2e-5", "1e-7"),    # full-sequence E fails
+        scaled_row("dom_fails", "1e-7", "2e-5"),    # conditional domain E fails
+        scaled_row("at_cutoff", "1e-5", "1e-5"),    # x100 -> exactly 1e-3: kept (<=)
+    ]) + "\n")
+    out = tmp_path / "out"
+    run(["map", "--domtbl", str(domtbl), "--outdir", str(out),
+         "--evalue-scale", "100", "--max-evalue", "0.001"])
+    assert mapped_targets(out) == {"keep", "at_cutoff"}
+    log = next((out / "logs").glob("*.log")).read_text()
+    assert "rescale dropped=2" in log
+    assert "borderline=1" in log  # at_cutoff sits inside the print-precision band
+
+
+def test_evalue_rescale_by_one_changes_nothing_on_real_output(tmp_path):
+    # the test chunk was searched with -E/--domE 0.001, so scale 1 must keep every row
+    domtbl = next((SCRIPT.parents[1] / "assets/test_data/swissprot/hmmsearch_mgnifams")
+                  .glob("*.domtbl.gz"))
+    plain, scaled = tmp_path / "plain", tmp_path / "scaled"
+    run(["map", "--domtbl", str(domtbl), "--outdir", str(plain)])
+    run(["map", "--domtbl", str(domtbl), "--outdir", str(scaled),
+         "--evalue-scale", "1", "--max-evalue", "0.001"])
+    summary = "uniprot_sprot_chunk_000001_mgnifams.summary.tsv"
+    assert (plain / summary).read_text() == (scaled / summary).read_text()
+
+
+def test_evalue_scale_requires_max_evalue(tmp_path):
+    domtbl = tmp_path / "uniprot_test_chunk_000001_mgnifams.domtbl"
+    domtbl.write_text(scaled_row("keep", "1e-7", "1e-7") + "\n")
+    proc = run(["map", "--domtbl", str(domtbl), "--outdir", str(tmp_path / "o"),
+                "--evalue-scale", "100"], expect_ok=False)
+    assert proc.returncode != 0
+    assert "--evalue-scale and --max-evalue go together" in proc.stderr

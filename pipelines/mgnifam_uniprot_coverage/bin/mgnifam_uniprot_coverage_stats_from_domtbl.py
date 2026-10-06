@@ -276,6 +276,14 @@ def run_map(args):
     logger.info("START map  domtbl=%s", args.domtbl)
     logger.info("coords=%s  min_score=%s  max_ievalue=%s",
                 "env" if args.env else "ali", args.min_score, args.max_ievalue)
+    if (args.evalue_scale is None) != (args.max_evalue is None):
+        sys.exit("--evalue-scale and --max-evalue go together")
+    if args.evalue_scale is not None:
+        logger.info("rescale: E x %s, keep full-sequence E and c-Evalue <= %s",
+                    args.evalue_scale, args.max_evalue)
+        # domtbl prints E-values to 2 significant digits, so a rescaled value
+        # within ~5% of the cutoff may fall on either side of it
+        border_lo, border_hi = args.max_evalue / 1.05, args.max_evalue * 1.05
 
     if args.lists:
         cats = load_lists(args.lists, logger)
@@ -307,6 +315,7 @@ def run_map(args):
 
     lo_idx, hi_idx = (19, 20) if args.env else (17, 18)
     n_rows = n_kept = n_short = 0
+    n_rescale_dropped = n_borderline = 0
     every = args.log_every
 
     logger.info("parsing rows...")
@@ -328,6 +337,17 @@ def run_map(args):
                 continue
             if args.max_ievalue is not None and float(f[12]) > args.max_ievalue:
                 continue
+            if args.evalue_scale is not None:
+                # E = P x Z (full sequence) and P_dom x domZ (c-Evalue), so a
+                # search pinned to -Z = --domZ = Z_old maps exactly onto Z_new by
+                # one factor. Keep what hmmsearch -E/--domE would have reported.
+                e_seq = float(f[6]) * args.evalue_scale
+                e_dom = float(f[11]) * args.evalue_scale
+                if (border_lo < e_seq <= border_hi) or (border_lo < e_dom <= border_hi):
+                    n_borderline += 1
+                if e_seq > args.max_evalue or e_dom > args.max_evalue:
+                    n_rescale_dropped += 1
+                    continue
             n_kept += 1
 
             target = f[0]
@@ -357,6 +377,9 @@ def run_map(args):
     if n_short:
         logger.warning("%d rows had fewer than 21 fields and were skipped",
                        n_short)
+    if args.evalue_scale is not None:
+        logger.info("rescale dropped=%d borderline=%d (within 5%% of the cutoff)",
+                    n_rescale_dropped, n_borderline)
 
     stem = chunk_stem(args.domtbl)
     os.makedirs(args.outdir, exist_ok=True)
@@ -572,6 +595,14 @@ def main():
     m.add_argument("--max-ievalue", type=float, default=None,
                    help="maximum independent E-value; comparable across chunks "
                         "only if hmmsearch was given a common -Z/--domZ")
+    m.add_argument("--evalue-scale", type=float, default=None,
+                   help="multiply full-sequence E and c-Evalue by this factor, "
+                        "Z_new / Z_old, before --max-evalue; valid only for a "
+                        "search run with -Z = --domZ = Z_old")
+    m.add_argument("--max-evalue", type=float, default=None,
+                   help="with --evalue-scale: keep rows whose rescaled "
+                        "full-sequence E and c-Evalue are both <= this, i.e. "
+                        "what hmmsearch -E/--domE would report at Z_new")
     m.add_argument("--env", action=argparse.BooleanOptionalAction, default=True,
                    help="envelope (default) rather than alignment coordinates; "
                         "--no-env for ali coords")
