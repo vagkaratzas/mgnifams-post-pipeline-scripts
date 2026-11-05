@@ -142,6 +142,7 @@ ls_additional_workspace_folders: []
 # Note that when using the JetBrains backend, language servers are not used and this list is correspondingly ignored.
 language_servers:
 - python
+- nextflow
 
 # list of workspace folder paths (LSP backend only).
 # These folders will be used to build up Serena's symbol index.
