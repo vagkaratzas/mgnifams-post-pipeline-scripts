@@ -1,0 +1,5 @@
+family	mgyp	seq_from	seq_to	hmm_from	hmm_to	n_end	c_end	copy	copy_full	class
+4542	9160527382	2	136	1	87	curved	jagged	1	False	partial_repeat
+4542	9160527382	277	341	52	106	jagged	curved	2	False	partial_repeat
+26748	9160527382	1	152	1	92	curved	jagged	1	False	partial_repeat
+26748	9160527382	274	347	53	113	jagged	curved	2	False	partial_repeat

@@ -25,32 +25,12 @@ Bash scripts are run directly:
 bash annotate_fasta_with_hmm.sh <hmm_file[.gz]> <fasta> <domtblout>
 ```
 
-Test data is available in `assets/test_data/` for manual testing.
+## Layout
 
-## Pipeline Stages & Script Relationships
-
-Scripts are meant to be run in this logical order:
-
-1. **Extraction** — Pull data from the MGnifams work directory output:
-   - `extract_pdb_scores.py`, `extract_foldseek_m8s.py`, `extract_parsed_domains.py`
-   - `extract_reps_fasta_from_msa.py`, `extract_tm_families.py`
-
-2. **Metrics** — Compute similarity and quality scores:
-   - `calculate_fam_similarities.py` → `report_redundant_fams.py` (Jaccard-based redundancy detection)
-   - `calculate_stars.py` → `update_stars_sqlite.py` (quality/novelty ranks into DB)
-   - `calculate_annotation_stats.py` and `compare_annotation_stats.py`
-
-3. **Redundancy removal** — After filtering redundant families:
-   - `remove_ids_from_csv.py`, `map_ids.py`, and related `map_*` / `remove_*` scripts
-
-4. **Annotation** — Self-annotation with MGnifam HMMs:
-   - `pipelines/annotation_percentages/main.nf` runs the local CSV/CSV.GZ → FASTA → hmmsearch (nf-core `hmmer/hmmsearch` module) → append → stats comparison workflow
-   - That pipeline's python scripts (`extract_fasta_from_proteins_csv.py`, `append_mgnifams_annot.py`, `calculate_annotation_stats.py`, `compare_annotation_stats.py`) now live in `pipelines/annotation_percentages/bin/`, not the repo-root `bin/`
-   - `calc_annot_diffs.py`, `extract_hmmsearch_mgnifams_exclusive.py`
-
-5. **Database population** — Finalize the SQLite database:
-   - `update_domain_blobs.py`, `update_secondary_structure_blobs.py`
-   - `subset_mgnifams_sqlite.py`, `parse_s4pred_to_feature_viewer.py`
+- **Publication scripts** (every number, figure and table of the MGnifams paper): `pipelines/annotation_percentages`, `pipelines/uniprot_annotation_percentages`, `pipelines/mgnifam_uniprot_coverage`, `bin/biome_analysis.py`, `bin/pfam_version_checks.py`, and `paper/` (`scripts/` side by side because they import each other, `data/`, `figures/`, `tests/`). The root `README.md` maps each paper item to its script; keep it to publication scripts only.
+- **Playground** (`playground/`): superseded analyses, exploration and the website-database tools (`update_*_blobs.py`, `update_stars_sqlite.py`, `subset_mgnifams_sqlite.py`, `calculate_stars*.py`), with their tests and fixtures; described in `playground/README.md`.
+- Tests: `python -m pytest tests`, `python -m pytest playground/tests`, and `python paper/tests/test_<name>.py`.
+- No local or cluster paths in committed files: cluster locations are environment variables the `.sh` wrappers require.
 
 ## SQLite Schema (key tables)
 

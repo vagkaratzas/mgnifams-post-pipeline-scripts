@@ -4,7 +4,7 @@ import importlib.util
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "bin" / "extract_fasta_from_proteins_csv.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "pipelines" / "annotation_percentages" / "bin" / "extract_fasta_from_proteins_csv.py"
 
 
 def load_module():

@@ -1,0 +1,2 @@
+protein	name	accession	description	seq_from	seq_to	hmm_from	hmm_to	model_length
+MGYP000897249532	MGnifam 243	MGYF0000000243	-	1	176	1	173	173

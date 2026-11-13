@@ -1,128 +1,79 @@
 # mgnifams-post-pipeline-scripts
-Contains post-processing scripts for various stats, after the main MGnifams pipeline finishes execution
 
-## bin/synteny_census.py
-Gene-neighbourhood / synteny analysis for an MGnifam family, against the MGnify proteins
-parquet store queried with DuckDB.
+Scripts behind the numbers, figures and tables of the MGnifams paper (releases 1.0 and 1.1, https://ftp.ebi.ac.uk/pub/databases/metagenomics/mgnifams/). They run on the outputs of the [MGnifams pipeline](https://github.com/EBI-Metagenomics/mgnifams) and on public MGnify, UniProt and Pfam data.
 
-Input is a text file of family member `protein_id`s — the MSA members (`/start-end` suffixes
-and an optional `MGYP` prefix are stripped). It answers: **what does this family recurrently
-sit next to, and is the arrangement conserved?**
+Scripts that no paper number depends on (superseded analyses, exploration, website database tools) are in [`playground/`](playground/README.md).
 
-```
-python bin/synteny_census.py ids.txt \
-  --metadata /path/mgy_proteins_metadata.parquet \
-  --pfam     /path/mgy_proteins_pfam.parquet \
-  --id-strip-prefix MGYP \
-  --outdir output/synteny_243 \
-  --threads 16 --memory-limit 64GB
-```
+## Layout
 
-That is the whole analysis. `--targets` is optional and only tests a named hypothesis on top.
-
-### How it works
-1. `protein_id` → `contig_id` (metadata parquet) — **skipped with `--contigs`**
-2. every gene on those contigs, i.e. the neighbourhoods (metadata parquet)
-3. Pfam annotations for all those genes (pfam parquet)
-4. per contig: sort genes, locate the family gene(s) = **anchors**, take the window around
-   each (within `--window-genes` ranks **and** `--window-bp` bp), rank the partners
-
-A **partner** is anything recurring in the anchors' windows: a Pfam accession, or — for genes
-with *no* Pfam — its `cluster_rep`. Dark neighbours are still nameable, and a recurrent
-unannotated ORF beside a novel family is often the interesting result.
-
-### Reading the partner table
-
-```
-partner            indep   frac offset  str  consv  gap_bp    aa  enrich
-*PF01183               2  0.667     +1 same    1.0     750   183     1.8
- cluster:900           2  0.667     +2 same    1.0    2150    67     1.8
- PF09999               1  0.333     +1 same    1.0    9600   167     1.8
-```
-
-| column | meaning |
+| Path | What |
 |---|---|
-| `indep` | independent lineages (distinct **anchor `cluster_rep`**) with this partner in the window. **The column that matters** — 300 copies of one over-sampled genome are one observation, not 300. |
-| `frac` | `indep / (indep + confident absences)`. A confident absence is a `FULL`-window anchor lacking the partner; edge-truncated windows cannot testify to absence, so they are excluded from the denominator. |
-| `offset` | modal **signed** gene offset, read in the *anchor's* direction: `-1` = directly upstream, `+1` = directly downstream. Strand-aware, so a minus-strand anchor with mirrored coordinates reports the same offset as a plus-strand one. |
-| `consv` | fraction of independent lineages showing that **exact** arrangement (same offset, same relative strand). |
-| `enrich` | window frequency vs the partner's frequency on the same contigs at large. `~1` = merely abundant here (transposases, ribosomal proteins), not specifically adjacent. |
-| `aa` | median length. Unannotated ~50–150 aa neighbours are holin/spanin-sized. |
+| `pipelines/annotation_percentages/` | Coverage of MGnify90 by Pfam and MGnifams (Nextflow) |
+| `pipelines/uniprot_annotation_percentages/` | Pfam and MGnifams searches of UniProtKB (Nextflow) |
+| `pipelines/mgnifam_uniprot_coverage/` | UniProtKB coverage statistics, Tables 1 and 2, from those searches (Nextflow) |
+| `bin/` | `biome_analysis.py` (biome leaves per family), `pfam_version_checks.py` (Pfam release of a set of annotations) |
+| `paper/scripts/` | Analyses and figure / table generators; Python files import each other, so they stay side by side |
+| `paper/data/` | Small inputs and intermediate tables the generators read |
+| `paper/figures/` | Figure 1 (nf-metro spec) and Figure 2 (Excalidraw scene) |
+| `paper/tests/`, `tests/` | Tests |
 
-`indep` and `consv` together are the whole point: **high `indep` + high `consv` = synteny**
-(same gene, same place, every time). High `indep` + low `consv` = the gene is merely *nearby*
-— co-occurrence, not a conserved cassette. Unsigned distances cannot tell those apart, which
-is why the offset is signed.
+## Paper item → script
 
-Anchors are classified by what their window can prove, independently of any target:
-`FULL` (window fully on-contig — absence is informative) · `PARTIAL` (one side truncated by a
-contig edge) · `EDGE` (both sides truncated) · `ISOLATED` (lone gene on the fragment, says
-nothing). Only `FULL` lineages enter the denominator.
+| Paper item | Scripts | Inputs |
+|---|---|---|
+| Release 1.1 counts (updated and not-updated families, by reason) | `paper/scripts/pass1.sh` | release 1.1 outputs |
+| MGnify90 coverage (Results, Abstract) | `pipelines/annotation_percentages` | MGnify Proteins 2024_04 MGnify90, `mgnifams_hmm.lib.gz` |
+| UniProtKB coverage, Tables 1 and 2 | `pipelines/uniprot_annotation_percentages` (searches), `pipelines/mgnifam_uniprot_coverage` (statistics, one search space), `paper/scripts/tm_classes.py` and `catalogue_lists.py` (Table 2 categories), `tables_1_2.py` (tables) | UniProtKB 2026_02, Pfam-A 38.2 |
+| Annotation evidence (Results, Supplementary Table S1, Discussion) | `annotation_evidence.py` / `.sh`, `table_s1.py` | release 1.0 and 1.1 `table_data/`, Pfam clan lists 36.0, 38.1, 38.2 |
+| Figure 3, Supplementary Figures S1–S3 | `catalogue_probe.py` / `.sh` (writes `data/catalogue_*.csv.gz`), `figure3.py` | release 1.0 and 1.1 outputs |
+| Transmembrane and disordered families | `tm_classes.py` / `.sh` | DeepTMHMM, s4pred and ESMFold outputs of the release |
+| Pfam family sizes and model lengths | `pfam_recount.sh`, `pfam_lengths.py` | MGnify Proteins 2026_07 Pfam parquet, Pfam-A 38.1 HMMs |
+| Pfam release behind MGnify Proteins 2024_04 (Methods) | `bin/pfam_version_checks.py` | dated annotation samples, Pfam family lists |
+| Biome breadth and biome-exclusive families, Supplementary Table S2 | `biome_probe.sh`, `biome_breadth.py` / `.sh` (imports `bin/biome_analysis.py`), `breadth_size.py`, `survival.sh`, `uniprot_hits.sh`, `uniprot_hit_taxa.sh`, `table_s2.py` | release biome tables, UniProtKB search outputs |
+| Habitat check of the biome-exclusive families (BLASTx) | `contig_lookup.py` / `.sh`, `fetch_contigs.py`, `fetch_hits.py`, `blastx_uniref.sh`, `blastx_summary.py`, `uniref_summary.py` | MGnify API, UniProt API, UniRef90 2026_02 |
+| Clans | `clan_inputs.sh`, `compute_clans.sh` (`mgnifam compute_clans` 4.1.0), `clan_stats.py` | release 1.1 full MSAs |
+| Near-identical family pairs (Limitations) | `near_identical.py` | `clan_edges.tsv.gz` of two runs |
+| Change between releases 1.0 and 1.1 (Discussion) | `diff_10_11.sh`, `diff_followup.sh` | release 1.0 and 1.1 full MSAs |
+| Multiple hits per protein (Methods, case studies) | `classify_multi_hits.py` / `.sh`, `rows_stats.py` | release 1.1 full MSAs |
+| Domain architectures, Figure 4; Pfam domains per family | `architectures.py` / `.sh`, `figure_architectures.py`, `pfam_per_family.py` / `.sh` | full MSAs, MGnify Proteins 2026_07 Pfam parquet |
+| Member regions of MGYF0000000025 against Pfam and FunFam | `member_search.sh` | full MSA, Pfam-A 38.2, CATH-FunFams 4.3.0 |
+| Gene neighbourhoods (MGYF0000000025, MGYF0000000243, MGYF0000032058), Figure 6 | `neighbourhood.py` / `.sh`, `independence.py`, `figure6.py` | full MSAs, MGnify Proteins 2026_07 parquets, MGnify API |
+| Structure of the 1.1_clan_3863 representative, Figure 5 | `figure5.py`, `render_structure.py` (PyMOL) | `data/esmfold_*`, Pfam 38.2 domtbl |
+| Novel families against NMPFamsDB (Supplementary Table S3) | `novel_reps.py` | `data/novel_*`, NMPFamsDB v1 and NMPFamsDB2 HMMs |
+| Representatives no longer in MGnify Proteins (Limitations) | `rep_resolve.py` | release 1.1 `families.tsv.gz`, MGnify Proteins API |
+| Figure 1 | `paper/figures/figure-1.mmd` | rendered with nf-metro |
+| Figure 2 | `figure2.gen.py` | writes `paper/figures/figure-2.excalidraw` |
 
-### Optional: test a named hypothesis
-`--targets` adds a POSITIVE/NEGATIVE verdict, treating the listed Pfams as **one** hypothesis
-(a hit on any of them counts — e.g. PF01183 and PF25309 are two domains of one endolysin gene):
+## Running
 
-```
-python bin/synteny_census.py ids.txt --metadata ... --pfam ... \
-  --targets PF01183,PF25309 --outdir output/synteny_243 --out-prefix endolysin
-```
+- Python 3.10 or later. Most scripts use the standard library only; `figure3.py` needs plotnine, `figure_architectures.py`, `figure5.py` and `figure6.py` need matplotlib, `render_structure.py` needs PyMOL, and the parquet readers need pyarrow or polars. External tools: HMMER 3.4, DIAMOND 2.1.8, mgnifam 4.1.0 (all as Singularity images).
+- Run generators from the repository root (`python paper/scripts/figure6.py --out figures/figure-6`); their defaults read `paper/data/`.
+- The `.sh` files are Slurm jobs for a cluster that holds the release outputs. Each stops with a message naming the variables to set (`V`: the directory holding the `1.0/` and `1.1/` release outputs; `DB`: an MGnify Proteins release; `CACHE` / `IMG`: Singularity images; `BIND`: extra bind paths; `W`: a scratch directory; others are named in the script header). Copy the Python files a wrapper names next to it before submitting.
+- Tests: `python -m pytest tests` and `for t in paper/tests/test_*.py; do python $t; done`; many scripts also take `--selftest`.
 
-```
-HYPOTHESIS PF01183,PF25309 (any of them counts as a hit)
-  independent lineages with the target adjacent = 2
-  confident absences (FULL window, no target)   = 1
-  VERDICT: 2/3 = 67% of assessable lineages
-```
+## Reference: pipelines and bin/
 
-Caveat the script prints and you should keep: partners are ranked on the same data that
-suggested them. The top hit is a hypothesis to confirm on held-out members, not a test that
-has already passed.
+### pipelines/mgnifam_uniprot_coverage/
+How much of UniProtKB do the MGnifam models cover that **Pfam does not already explain**, at
+residue and sequence level, split by family category (novel, membrane-α/β, disordered)?
 
-### Outputs
-Written to `--outdir` (default `output/synteny/`), prefixed by `--out-prefix`:
-- `log.txt` — timestamped progress, mirrored to the console
-- `synteny_partners.tsv` — the ranked partner table (the main result)
-- `synteny_anchors.tsv` — one row per anchor occurrence: contig, window status, partners with offsets
-- `synteny_maps.txt` — ASCII gene map of each anchor-bearing contig
-- `synteny_report.txt` — the printed summary
-- `synteny_contigs.txt` — the contigs found by step 1, written as soon as step 1 finishes so a
-  later failure doesn't cost the scan again; feed it straight back as `--contigs`
+Runs over `hmmsearch --domtblout` chunks that already exist — no search of its own — and emits
+publication-ready tables, four vector figures and a report with the numbers filled into prose.
+Validation is part of the run: given a per-subset `reference_csv` it must reproduce that
+database's `annotation_percentage_increase.csv` exactly, or the run fails and publishes nothing.
 
-### `--contigs`: skip the protein → contig scan
-Takes a file of `contig_id`s already known to carry the family and skips step 1, a full
-`protein_id` scan of a ~6-billion-row parquet — typically the slowest step of the run, which is
-why every run caches its result to `<prefix>_contigs.txt`. Anchors are recovered from step 2
-instead, so results are identical. The metadata is occurrence-level — one `protein_id` can sit on hundreds
-of contigs — so this file is usually far longer than the ids file, and your anchor count will
-far exceed your input count. That is also why independence is measured in `cluster_rep`s.
-
-Tests (synthetic fixtures; cover signed offsets on strand-mirrored contigs, unannotated
-cluster partners, the assessable denominator, order conservation, the `--contigs` skip, the
-`AND` window cap and the float-column Pfam-attach regression):
-
-```
-pytest tests/test_synteny_census.py
+```bash
+nextflow run pipelines/mgnifam_uniprot_coverage/main.nf -profile singularity \
+  --input samplesheet.csv --lists_dir lists/ --mgnifams_hmm mgnifams_hmm.lib.gz \
+  --outdir results
 ```
 
-## bin/make_contig_figure.py
-Renders the `*_maps.txt` output of `synteny_census.py` into one publication-ready,
-600-dpi PNG per contig: gene arrows drawn to scale on a bp axis, coloured by whole-protein
-family assignment (Pfam or MGnifams), with the anchor gene highlighted. Genes with no Pfam
-(`cluster:...` in the map) are drawn as unassigned grey. Labels are staggered over two rows
-and dropped where a contig is too crowded for them to stay legible. The PNG is cropped to the
-drawn content with a 2 px white margin.
-```
-python bin/make_contig_figure.py \
-  --input <path/to/partners_maps.txt> \
-  --output <path/to/figures/>
-```
-Requires `cairosvg` and `pillow`. Tests:
-```
-pytest tests/test_make_contig_figure.py
-```
+See **[its README](pipelines/mgnifam_uniprot_coverage/README.md)** for the samplesheet format, the
+derived category lists, the validation checks and measured resource use. The map/reduce engine
+lives at `pipelines/mgnifam_uniprot_coverage/bin/mgnifam_uniprot_coverage_stats_from_domtbl.py`
+and is usable standalone (`map` / `reduce` subcommands) for one-off work.
 
-## bin/biome_analysis.py
+### bin/biome_analysis.py
 Streams MGnifam biome blobs from the `mgnifam` SQLite table, counts leaf-level
 biome paths per family, writes a text report, and optionally renders a PNG bar
 plot. Leaf biomes are keyed by their full `root:...` path, so duplicate terminal
@@ -147,235 +98,7 @@ python bin/biome_analysis.py <path/to/mgnifams.sqlite3> \
   --log-every 1000
 ```
 
-## bin/extract_true_novel_superfamilies.py
-Writes a TXT list of true-novel superfamily ids. A superfamily is included only
-when every member family listed in the `Family Ids` column of
-`clan_membership.csv` is present in `mgnifams_no_annotation_ids.txt`.
-
-Default inputs:
-- `assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt`
-- `assets/mgnifams_v2_results/generate_families/network/clan_membership.csv`
-
-Default output:
-`assets/mgnifams_v2_results/generate_families/network/true_novel_clans.txt`
-
-```
-python bin/extract_true_novel_superfamilies.py
-```
-
-Custom paths can be supplied with:
-
-```
-python bin/extract_true_novel_superfamilies.py <path/to/mgnifams_no_annotation_ids.txt> \
-  <path/to/clan_membership.csv> \
-  --output <path/to/true_novel_clans.txt>
-```
-
-## bin/annotate_novel_through_domain_architecture.py
-Parses `domain_blob` JSON from the `mgnifam` SQLite table for the novel family
-ids listed in `mgnifams_no_annotation_ids.txt`, extracts unique Pfam ids from
-each domain architecture, and reports true-novel clans/singletons whose member
-families gained Pfam annotations through those architectures.
-
-Default inputs:
-- `assets/mgnifams_v2_results/mgnifams_test.sqlite3`
-- `assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt`
-- `assets/mgnifams_v2_results/generate_families/network/clan_membership.csv`
-
-Default outputs:
-- `assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_annotate_novel_through_domain_architecture.csv`
-- `assets/mgnifams_v2_results/generate_families/network/transiently_annotated_clans.csv`
-- `assets/mgnifams_v2_results/generate_families/novel/true_novel_without_annotate_novel_through_domain_architecture.txt`
-
-```
-python bin/annotate_novel_through_domain_architecture.py
-```
-
-Custom paths can be supplied with:
-
-```
-python bin/annotate_novel_through_domain_architecture.py \
-  --sqlite <path/to/mgnifams.sqlite3> \
-  --novel-ids <path/to/mgnifams_no_annotation_ids.txt> \
-  --clan-membership <path/to/clan_membership.csv> \
-  --family-pfams-output <path/to/family_pfams.csv> \
-  --clan-output <path/to/transiently_annotated_clans.csv> \
-  --true-novel-output <path/to/true_novel_without_pfams.txt>
-```
-
-## bin/extract_family_sequences_fasta.py
-Writes FASTA records from `metadata_mqc.csv` for families listed in a TXT file.
-The FASTA header is the `Family Id` value, and the sequence is taken from the
-`Sequence` column. Input selector IDs such as `Singleton_243` are matched by the
-second underscore-delimited field, so `Singleton_243` selects `Family Id` `243`.
-
-```
-python bin/extract_family_sequences_fasta.py \
-  assets/mgnifams_v2_results/generate_families/metadata_mqc.csv \
-  assets/mgnifams_v2_results/generate_families/novel/true_novel_without_annotate_novel_through_domain_architecture.txt \
-  --output assets/mgnifams_v2_results/generate_families/novel/true_novel_without_annotate_novel_through_domain_architecture.fasta
-```
-
-## bin/calculate_true_novel_superfamily_novelty.py
-Filters `clan_membership.csv` down to the true-novel superfamilies listed
-in `true_novel_clans.txt`, computes a percentage novelty score for each
-row from the family IDs present in `input/mgnifams_l100_plddt70_novel.csv`,
-drops rows with no matching family IDs, and sorts the output by novelty score
-descending, then family size descending.
-
-Default inputs:
-- `input/mgnifams_l100_plddt70_novel.csv`
-- `assets/mgnifams_v2_results/generate_families/network/clan_membership.csv`
-- `assets/mgnifams_v2_results/generate_families/novel/true_novel_clans.txt`
-
-Default output:
-`assets/mgnifams_v2_results/generate_families/network/true_novel_clan_l100_plddt70_scores.csv`
-
-```
-python bin/calculate_true_novel_superfamily_novelty.py
-```
-
-Custom paths can be supplied with:
-
-```
-python bin/calculate_true_novel_superfamily_novelty.py \
-  <path/to/mgnifams_l100_plddt70_novel.csv> \
-  <path/to/clan_membership.csv> \
-  <path/to/true_novel_clans.txt> \
-  --output <path/to/true_novel_clan_l100_plddt70_scores.csv>
-```
-
-## bin/build_superfamilies.py
-Builds weighted superfamily clusters from the MGnifams family similarity MultiQC CSV.
-The script removes the display-only `Row` column, filters out edges where either
-family id contains `_` (pre-redundant leftovers), writes the filtered edge list, identifies connected
-components as superfamilies, selects the representative family by highest
-within-cluster summed Jaccard weight, exports canonical family ids in `1..35459`
-that are absent from both edge columns as singletons, writes a size-descending
-statistics CSV, writes a total family count sanity check, and renders two size
-distribution barplots: non-singleton exact sizes `2..10`, then 10-wide ranges
-from `11` onward.
-
-Default input:
-`assets/mgnifams_v2_results/generate_families/similarity_mqc.csv`
-
-Default outputs are written under
-`assets/mgnifams_v2_results/generate_families/network/`:
-- `similarity_mapped_mgnifams.csv`
-- `unclustered_mgnifam_ids.txt`
-- `clan_membership.csv`
-- `total_families.txt`
-- `superfamily_size_distribution_2_to_10.png`
-- `superfamily_size_distribution_11_plus.png`
-
-```
-python bin/build_superfamilies.py
-```
-
-Custom paths can be supplied with:
-
-```
-python bin/build_superfamilies.py <path/to/similarity_mqc.csv> \
-  --filtered-csv <path/to/filtered_edges.csv> \
-  --singleton-ids <path/to/unclustered_mgnifam_ids.txt> \
-  --report-csv <path/to/clan_membership.csv> \
-  --total-families <path/to/total_families.txt> \
-  --plot-small-png <path/to/superfamily_size_distribution_2_to_10.png> \
-  --plot-large-png <path/to/superfamily_size_distribution_11_plus.png>
-```
-
-## bin/rank_hmmstat.py
-ank profile HMMs from a HMMER `hmmstat` report by a composite quality score
-
-## bin/update_seed_msa_blobs.py
-Updates seed MSA blobs (used after trimming off env coords)
-
-## bin/trim_seed_msa_envelopes.py
-Trims off any start/end parts of seed MSA sequences that belong to the envelope and re-calculates the sequence coordinates appropriately.
-
-## bin/plot_mgnifam_metadata_distributions.py
-Family-level distribution figures for the catalogue (paper Figure X). Every panel is a stacked
-barplot of annotated vs unannotated (novel) families, where novel ids are read from
-`mgnifams_no_annotation_ids.txt`; the percentage above each bar is the share of unannotated
-families in that bin — printed on **every** bin, rotated upright where the bar is too short to
-carry it horizontally.
-
-Written to the repo's `scientific-plotting-skill` standard: **plotnine** only, vector **PDF**
-output (with a 300-dpi PNG preview alongside), one **Times** text size for every text element
-(`TEXT_SIZE_PT`), no plot titles — context belongs in the manuscript caption — and the
-colorblind-safe **Wong** palette (orange = annotated, sky blue = novel). Everything tunable about
-how the figures look sits in a single parameter block at the top of the script.
-
-Output is split by where the plot is meant to end up (`--mode`, default `all`):
-
-**`figure` → `<output-dir>/figures/`** — the main-text Figure X, one panel per claim in the
-manuscript paragraph:
-- **A** `figure_Xa_size.pdf` — family size, log₁₀ bins, full range
-- **B** `figure_Xb_length.pdf` — representative sequence length, 100-aa bins, full range (75–2,000 aa)
-- **C** `figure_Xc_plddt.pdf` — mean pLDDT of the representative structure, 5-unit bins
-- `figure_X_family_metadata.pdf` — the three panels stacked and tagged A/B/C, 180 mm wide
-
-Size uses log₁₀ bins here because its range (29–1,515,677) cannot be binned legibly on a linear
-axis; a single panel is what lets the reader see the full span *and* the annotated/novel shift.
-Length needs no such trick — 75–2,000 aa fits one panel at 100-aa bins. Length bins are
-right-closed (`1,901–2,000`, not `2,000–2,099`) so the axis closes exactly on the longest
-representative sequence.
-
-**`supplementary` → `<output-dir>/supplementary_figures/`** — the fine-grained view behind panels
-A and B, plus the companion structural metric:
-- `size_{small,medium,large}.pdf` — linear bins, half-open cuts so each cut lands on a bin edge
-- `length_{short,medium,long}.pdf` — same
-- `ptm.pdf` — pTM of the representative structure
-
-Also writes `<output-dir>/mgnifam_metadata_stats.txt` with min/Q1/median/Q3/max/mean per metric,
-reported overall and split by annotated vs novel — the numbers quoted in the manuscript.
-
-Input is the `mgnifam` table CSV (`id,full_size,rep_length,...,plddt,ptm`): the full-catalogue
-`mgnifam_codon.csv`, or `table_data/mgnifam.csv` for a quick test. Note this is *not* the
-MultiQC `metadata_mqc*.csv`, which carries no pLDDT/pTM columns.
-
-Needs `plotnine` (`pip install plotnine`) and a Times-metric serif font. Times New Roman is used
-when present; otherwise the script falls back to Nimbus Roman, then Liberation Serif (both ship
-with most Linux distributions), and reports which one it used.
-
-```
-python bin/plot_mgnifam_metadata_distributions.py \
-  --metadata mgnifam_codon.csv \
-  --novel-ids assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt \
-  --output-dir output
-```
-
-Bin sizes and split thresholds are tunable; defaults are tuned to the full 35,459-family
-catalogue, so a small test dataset needs smaller ones:
-
-```
-python bin/plot_mgnifam_metadata_distributions.py \
-  --metadata assets/mgnifams_v2_results/table_data/mgnifam.csv \
-  --novel-ids assets/mgnifams_v2_results/generate_families/novel/mgnifams_no_annotation_ids.txt \
-  --output-dir output/test \
-  --mode all \
-  --size-small-max 100 --size-medium-max 1000 \
-  --size-small-bin 20 --size-medium-bin 200 --size-large-bin 1000 \
-  --length-short-max 120 --length-medium-max 200 \
-  --length-short-bin 10 --length-medium-bin 20 --length-long-bin 50 \
-  --plddt-bin 5 --ptm-bin 0.05
-```
-
-## bin/plot_family_length_distribution.py
-Produces 3 stacked bar chart PNGs of family distribution by annotation status, split into short,
-medium, and long groups. Binning and splitting can be done by HMM consensus length (aa) or family
-size (number of sequences) via `--mode length|size`.
-```
-python bin/plot_family_length_distribution.py \
-  --metadata <path/to/metadata_mqc.csv> \
-  --domtbl <path/to/funfams.domtbl.gz> <path/to/pfam.domtbl.gz> \
-  --output-prefix <path/to/family_length> \
-  --mode length \
-  --short-max 300 --med-max 1000 \
-  --short-bin 10 --med-bin 50 --long-bin 100
-```
-
-## calculate_annotation_stats.py
+### calculate_annotation_stats.py
 Calculates total annotated sequences and total annotated amino acids from a
 protein CSV or CSV.GZ metadata column. Use `--annotation-keys p` for Pfam-only
 statistics and `--annotation-keys p,m` after appending MGnifam annotations.
@@ -389,45 +112,21 @@ python pipelines/annotation_percentages/bin/calculate_annotation_stats.py \
   --output <annotation_stats.csv>
 ```
 
-## calculate_stars.py
-Through sqlite queries, calculates each family stars for both quality and novelty.
-
-## calculate_stars_from_folders.py - not updated with extra logic
-Through parsing the MGnifams output folders, calculates each family stars for both quality and novelty.
-
-## extract_tm_families.py
-From the mgnifams workdir, find and extract TM families into a dedicated output folder.
-
-## extract_fasta_from_proteins_csv.py
+### extract_fasta_from_proteins_csv.py
 From the initial MGnifams input (PLP output CSV or CSV.GZ), extract a FASTA file.
 Lives under `pipelines/annotation_percentages/bin/` (used by that pipeline).
 
-## extract_reps_fasta_from_msa.py
-From a .fas format MSA folder, extract all sequence representatives in a single fasta file.
-
-## annotate_fasta_with_hmm.sh
-Annotates FASTA sequences with `hmmsearch` inside the configured HMMER
-Singularity image. Gzipped HMM libraries are decompressed into a temporary
-work directory before searching.
-
-```
-bash bin/annotate_fasta_with_hmm.sh \
-  assets/mgnifams_v2_results/generate_families/families/mgnifams_hmm.lib.gz \
-  <proteins.fasta> \
-  <mgnify_proteins_mgnifams.domtbl>
-```
-
-## append_mgnifams_annot.py
+### append_mgnifams_annot.py
 Appends MGnifam `hmmsearch --domtblout` annotations back onto the initial CSV or
 CSV.GZ sequences by replacing `metadata["m"]`. Reads plain or gzipped domtbl.
 Lives under `pipelines/annotation_percentages/bin/` (used by that pipeline).
 
-## compare_annotation_stats.py
+### compare_annotation_stats.py
 Compares two outputs from `calculate_annotation_stats.py` and writes the
 percentage-point and relative annotation increase.
 Lives under `pipelines/annotation_percentages/bin/` (used by that pipeline).
 
-## pipelines/annotation_percentages
+### pipelines/annotation_percentages
 Mini local Nextflow workflow (loose nf-core layout: one module per process under
 `modules/`, Conda env + container per module). Takes a local protein CSV/CSV.GZ,
 extracts FASTA, runs MGnifam `hmmsearch` (nf-core `hmmer/hmmsearch` module),
@@ -439,7 +138,7 @@ own `bin/`. See `pipelines/annotation_percentages/README.md`.
 nextflow run pipelines/annotation_percentages/main.nf -profile singularity
 ```
 
-## pipelines/uniprot_annotation_percentages
+### pipelines/uniprot_annotation_percentages
 Sister of `annotation_percentages` for UniProt FASTA input: runs two real `hmmsearch`es —
 Pfam (`--cut_ga`) and MGnifams (E-value) — then compares Pfam-only, MGnifams-only and the
 Pfam+MGnifams union at sequence and residue level (each exclusive set reported too), plus a
@@ -449,110 +148,3 @@ provenance report of DB checksums and tool versions. See `pipelines/uniprot_anno
 nextflow run pipelines/uniprot_annotation_percentages/main.nf -profile test,singularity
 ```
 
-## pipelines/run_prediction_annotations
-Mini local Nextflow workflow (nf-core layout) that runs the deep-learning predictors
-FUNGTION and CAALM on an amino acid FASTA, using the nf-core `fungtion/fungtion` and
-`caalm/caalm` modules. Their `*/downloadmodels` modules fetch the model weights unless
-`--fungtion_models` / `--caalm_models` point at already-downloaded ones. Both predictor
-modules are labelled `process_gpu`, so `-profile gpu` requests an accelerator and selects
-the CUDA container/env. See `pipelines/run_prediction_annotations/README.md`.
-
-```
-nextflow run pipelines/run_prediction_annotations/main.nf \
-  -profile singularity,gpu,slurm --input_fasta <proteins.fasta>
-```
-
-## extract_pdb_scores.py
-From the mgnifams workdir, find and extract esmfold predicted plddt and ptm scores along with name and length in csv format.
-
-## calculate_plddt_from_cif.py
-Fallback measure for those 10 sequences that pdb predictions were lost, and we average the predicted scores from their cif file. ptm 0.0
-- didn't use in the end
-
-## extract_pdb_scores.py
-From the mgnifams workdir, find, concat and extract foldseek output m8s.
-
-## extract_parsed_domains.py
-From the mgnifams workdir, find and output all parsed domain data files in an output folder.
-
-## subset_mgnifams_sqlite.py
-Given a file with family ids, subset a new sqlite db.
-
-## calculate_fam_similarities.py
-Given two of the mgnifams output tables csvs as input (mgnifam_proteins.csv and mgnifam.csv), calculates similarity output csv based on family and aa jackard indices.
-
-## report_redundant_fams.py
-Given a similarities.csv, produces a list of redundant fam ids as well as the similarities edgelist from 0.5 <= x < 0.95.
-If similarity >= 0.95, keep the bigger family. If same, keep family with smaller id.
-
-## parse_domain_architectures.py
-Builds the per-family domain architecture JSONs consumed by the site's Domain architecture card,
-from the re-annotated proteins CSV (`metadata` column, `"p"` for Pfam and `"m"` for MGnifam hits).
-Hits are positioned by their alignment coordinates and collapsed by clan: hits from the same clan
-that overlap by more than `--overlap-fraction` of the shorter hit render as a single chip. Hits from
-different clans never merge, however much they overlap, and Pfams and MGnifams are collapsed
-independently of each other. Chips are ordered by alignment start, then by length (shortest first),
-then alphabetically by id.
-
-| merged group | chip | links to |
-|---|---|---|
-| several MGnifam families of one clan | `MGnifam clan 233` | that clan's representative family |
-| several Pfams of one clan | `Pfam clan CL0172` | `interpro/set/pfam/CL0172/` |
-| a single family or accession | `MGnifam470` / `Glutaredoxin` | its own entry page |
-
-So a lone hit renders exactly as it would without clans; only genuine same-clan overlaps collapse.
-
-Every family in the clan file gets a JSON, including an empty one when it had no annotated
-sequence; those ids are also listed in `missing_families.txt` so nothing silently disappears.
-
-```bash
-python bin/parse_domain_architectures.py \
-  --proteins proteins_mgnifams.csv.gz \
-  --clan-membership assets/mgnifams_v2_results/generate_families/network/clan_membership.csv \
-  --pfam-mapping pfam_mapping.tsv \
-  --output-dir output/domain_results
-```
-
-`--pfam-mapping` accepts either `accession<TAB>name` or `pfam_id<TAB>name<TAB>clan_id`. Columns
-after the clan are ignored, along with a header row and any line whose first field is not a `PF…`
-accession. The `clan_id` column is what drives Pfam collapsing: a blank cell means that accession
-never merges, and a two-column file disables Pfam collapsing altogether while leaving MGnifam
-collapsing untouched.
-
-Options: `--overlap-fraction` (default `0.5`), `--top` (default `15`), `--base-url`, `--log-every`,
-and `--no-prefilter` to skip the `zcat | grep` prefilter that discards rows without an `"m"`
-annotation before they are parsed.
-
-## update_domain_blobs.py
-From a `parse_domain_architectures.py` output folder, load each `<family_id>.json` into the matching
-`mgnifam` row's `domain_blob`. Reports rows that had no JSON file and JSON files that had no row.
-
-```bash
-python bin/update_domain_blobs.py \
-  --db mgnifams.sqlite3 \
-  --json-dir output/domain_results
-```
-
-Options: `--table` (default `mgnifam`) and `--column` (default `domain_blob`), both validated
-against the schema before use.
-
-## update_stars_sqlite.py
-Checks if column exists. Create if not. Then append data.
-
-## identify_unmgnifamed_space.py
-This scripts receives two inputs; the original linclust clusters produced by the MGnifams pipeline
-and the final mgnifam_proteins.csv table. All initial clusters that have at least one of their MGYP
-members in the final proteins are removed. The remaining cluster reps along with their cluster sizes are reported.
-
-## calc_annot_diffs.py
-This script receives two annotated files with three columns (id,protein,region).
-The id is relative to the HMM lib we annotated against.
-The annotated proteins between these two files must much.
-The script calculates the annotation differences and reports them.
-
-## concatenate_panther_subfolder_hmms.sh
-Bash script to aggregate PANTHER extracted hmms into one hmm file.
-
-## extract_hmmsearch_mgnifams_exclusive.py
-Write out exclusive annotated protein regions of second given file, compared to the first given file.
-CSV File format: mgnifam_id,protein,region

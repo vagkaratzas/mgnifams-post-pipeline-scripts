@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "bin" / "append_mgnifams_annot.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "pipelines" / "annotation_percentages" / "bin" / "append_mgnifams_annot.py"
 
 
 def load_module():

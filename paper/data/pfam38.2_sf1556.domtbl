@@ -1,0 +1,16 @@
+#                                                                            --- full sequence --- -------------- this domain -------------   hmm coord   ali coord   env coord
+# target name        accession   tlen query name           accession   qlen   E-value  score  bias   #  of  c-Evalue  i-Evalue  score  bias  from    to  from    to  from    to  acc description of target
+#------------------- ---------- ----- -------------------- ---------- ----- --------- ------ ----- --- --- --------- --------- ------ ----- ----- ----- ----- ----- ----- ----- ---- ---------------------
+MGYP009160527382     -            635 DUF285               PF03382.21   120   1.4e-45  140.2  26.7   1   3   5.5e-27   5.5e-27   80.2   6.7     6   113   357   466   349   469 0.89 -
+MGYP009160527382     -            635 DUF285               PF03382.21   120   1.4e-45  140.2  26.7   2   3   8.7e-18   8.7e-18   50.5   3.4    16    89   418   495   415   509 0.67 -
+MGYP009160527382     -            635 DUF285               PF03382.21   120   1.4e-45  140.2  26.7   3   3   8.7e-14   8.7e-14   37.6   1.4     2    57   577   635   576   635 0.79 -
+#
+# Program:         hmmsearch
+# Version:         3.3.2 (Nov 2020)
+# Pipeline mode:   SEARCH
+# Query file:      Pfam-A.38.2.hmm.gz
+# Target file:     MGYP009160527382.fasta
+# Option settings: /usr/bin/hmmsearch --domtblout pfam38.2_sf1556.domtbl --noali --cut_ga --cpu 8 Pfam-A.38.2.hmm.gz MGYP009160527382.fasta 
+# Current dir:     .
+# Date:            Thu Nov 12 11:29:53 2026
+# [ok]
