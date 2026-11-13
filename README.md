@@ -40,7 +40,7 @@ Scripts that no paper number depends on (superseded analyses, exploration, websi
 | Gene neighbourhoods (MGYF0000000025, MGYF0000000243, MGYF0000032058), Figure 6 | `neighbourhood.py` / `.sh`, `independence.py`, `figure6.py` | full MSAs, MGnify Proteins 2026_07 parquets, MGnify API |
 | Structure of the 1.1_clan_3863 representative, Figure 5 | `figure5.py`, `render_structure.py` (PyMOL) | `data/esmfold_*`, Pfam 38.2 domtbl |
 | Novel families against NMPFamsDB (Supplementary Table S3) | `novel_reps.py` | `data/novel_*`, NMPFamsDB v1 and NMPFamsDB2 HMMs |
-| Representatives no longer in MGnify Proteins (Limitations) | `rep_resolve.py` | release 1.1 `families.tsv.gz`, MGnify Proteins API |
+| Representatives no longer in MGnify Proteins, partial representatives (Limitations) | `rep_resolve.py` (`--all`) | release 1.1 `families.tsv.gz`, MGnify Proteins API |
 | Figure 1 | `paper/figures/figure-1.mmd` | rendered with nf-metro |
 | Figure 2 | `figure2.gen.py` | writes `paper/figures/figure-2.excalidraw` |
 
