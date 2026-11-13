@@ -51,3 +51,100 @@ Scripts that no paper number depends on (superseded analyses, exploration, websi
 - The `.sh` files are Slurm jobs for a cluster that holds the release outputs. Each stops with a message naming the variables to set (`V`: the directory holding the `1.0/` and `1.1/` release outputs; `DB`: an MGnify Proteins release; `CACHE` / `IMG`: Singularity images; `BIND`: extra bind paths; `W`: a scratch directory; others are named in the script header). Copy the Python files a wrapper names next to it before submitting.
 - Tests: `python -m pytest tests` and `for t in paper/tests/test_*.py; do python $t; done`; many scripts also take `--selftest`.
 
+## Reference: pipelines and bin/
+
+### pipelines/mgnifam_uniprot_coverage/
+How much of UniProtKB do the MGnifam models cover that **Pfam does not already explain**, at
+residue and sequence level, split by family category (novel, membrane-α/β, disordered)?
+
+Runs over `hmmsearch --domtblout` chunks that already exist — no search of its own — and emits
+publication-ready tables, four vector figures and a report with the numbers filled into prose.
+Validation is part of the run: given a per-subset `reference_csv` it must reproduce that
+database's `annotation_percentage_increase.csv` exactly, or the run fails and publishes nothing.
+
+```bash
+nextflow run pipelines/mgnifam_uniprot_coverage/main.nf -profile singularity \
+  --input samplesheet.csv --lists_dir lists/ --mgnifams_hmm mgnifams_hmm.lib.gz \
+  --outdir results
+```
+
+See **[its README](pipelines/mgnifam_uniprot_coverage/README.md)** for the samplesheet format, the
+derived category lists, the validation checks and measured resource use. The map/reduce engine
+lives at `pipelines/mgnifam_uniprot_coverage/bin/mgnifam_uniprot_coverage_stats_from_domtbl.py`
+and is usable standalone (`map` / `reduce` subcommands) for one-off work.
+
+### bin/biome_analysis.py
+Streams MGnifam biome blobs from the `mgnifam` SQLite table, counts leaf-level
+biome paths per family, writes a text report, and optionally renders a PNG bar
+plot. Leaf biomes are keyed by their full `root:...` path, so duplicate terminal
+labels such as `Sediment` or `Fecal` remain separate when they come from
+different branches. The report also lists duplicate terminal leaf labels to show
+where last-label-only grouping would collapse distinct paths.
+
+Default outputs are written under `output/`:
+- `mgnifams_biome_distribution.txt`
+- `mgnifams_biome_distribution.png`
+
+```
+python bin/biome_analysis.py <path/to/mgnifams.sqlite3>
+```
+
+Useful options:
+
+```
+python bin/biome_analysis.py <path/to/mgnifams.sqlite3> \
+  --output-dir <path/to/output> \
+  --no-plot \
+  --log-every 1000
+```
+
+### calculate_annotation_stats.py
+Calculates total annotated sequences and total annotated amino acids from a
+protein CSV or CSV.GZ metadata column. Use `--annotation-keys p` for Pfam-only
+statistics and `--annotation-keys p,m` after appending MGnifam annotations.
+Lives under `pipelines/annotation_percentages/bin/` (used by that pipeline).
+
+```
+python pipelines/annotation_percentages/bin/calculate_annotation_stats.py \
+  --input <proteins.csv.gz> \
+  --annotation-keys p,m \
+  --label pfam_mgnifam \
+  --output <annotation_stats.csv>
+```
+
+### extract_fasta_from_proteins_csv.py
+From the initial MGnifams input (PLP output CSV or CSV.GZ), extract a FASTA file.
+Lives under `pipelines/annotation_percentages/bin/` (used by that pipeline).
+
+### append_mgnifams_annot.py
+Appends MGnifam `hmmsearch --domtblout` annotations back onto the initial CSV or
+CSV.GZ sequences by replacing `metadata["m"]`. Reads plain or gzipped domtbl.
+Lives under `pipelines/annotation_percentages/bin/` (used by that pipeline).
+
+### compare_annotation_stats.py
+Compares two outputs from `calculate_annotation_stats.py` and writes the
+percentage-point and relative annotation increase.
+Lives under `pipelines/annotation_percentages/bin/` (used by that pipeline).
+
+### pipelines/annotation_percentages
+Mini local Nextflow workflow (loose nf-core layout: one module per process under
+`modules/`, Conda env + container per module). Takes a local protein CSV/CSV.GZ,
+extracts FASTA, runs MGnifam `hmmsearch` (nf-core `hmmer/hmmsearch` module),
+appends MGnifam annotations, computes Pfam-only and Pfam+MGnifam annotation
+statistics, and compares the increase. Its python scripts live in that pipeline's
+own `bin/`. See `pipelines/annotation_percentages/README.md`.
+
+```
+nextflow run pipelines/annotation_percentages/main.nf -profile singularity
+```
+
+### pipelines/uniprot_annotation_percentages
+Sister of `annotation_percentages` for UniProt FASTA input: runs two real `hmmsearch`es —
+Pfam (`--cut_ga`) and MGnifams (E-value) — then compares Pfam-only, MGnifams-only and the
+Pfam+MGnifams union at sequence and residue level (each exclusive set reported too), plus a
+provenance report of DB checksums and tool versions. See `pipelines/uniprot_annotation_percentages/README.md`.
+
+```
+nextflow run pipelines/uniprot_annotation_percentages/main.nf -profile test,singularity
+```
+
