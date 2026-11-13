@@ -38,11 +38,11 @@ uniprot_annotation_percentages/
 ## Run
 
 ```bash
-export NXF_SINGULARITY_CACHEDIR="<home>/Desktop/Tools/singularity"
+export NXF_SINGULARITY_CACHEDIR=<singularity image cache>
 nextflow run main.nf -profile singularity \
-  --input_fasta   <home>/Desktop/Databases/uniprot/uniprot_sprot.2026_02.fasta.gz \
-  --pfam_hmm      <home>/Desktop/Databases/pfam/Pfam-A.38.2.hmm.gz \
-  --mgnifams_hmm  <home>/Desktop/Databases/mgnifams/mgnifams_hmm.lib.gz \
+  --input_fasta   uniprot_sprot.2026_02.fasta.gz \
+  --pfam_hmm      Pfam-A.38.2.hmm.gz \
+  --mgnifams_hmm  mgnifams_hmm.lib.gz \
   --effective_db_size <total SwissProt seq count> \
   --outdir output/uniprot_annotation
 ```
@@ -50,7 +50,7 @@ nextflow run main.nf -profile singularity \
 Test run (100 seqs vs 14 Pfam + 108 Mgnifams models, output to `tmp/`):
 
 ```bash
-export NXF_SINGULARITY_CACHEDIR="<home>/Desktop/Tools/singularity"
+export NXF_SINGULARITY_CACHEDIR=<singularity image cache>
 nextflow run main.nf -profile test,singularity
 ```
 

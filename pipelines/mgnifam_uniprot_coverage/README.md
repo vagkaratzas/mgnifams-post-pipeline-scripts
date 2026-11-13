@@ -42,8 +42,8 @@ samplesheet's own location, so a sheet travels with its data.
 
 ```csv
 subset,mgnifams_domtbl_dir,pfam_domtbl_dir,total_sequences,total_residues,n_chunks,reference_csv
-swissprot,/nfs/.../swissprot/hmmsearch_mgnifams,/nfs/.../swissprot/hmmsearch_pfams,575503,208906902,1,sprot_increase.csv
-trembl,/nfs/.../trembl/hmmsearch_mgnifams,/nfs/.../trembl/hmmsearch_pfams,149234636,58049358499,150,trembl_increase.csv
+swissprot,<search outputs>/swissprot/hmmsearch_mgnifams,<search outputs>/swissprot/hmmsearch_pfams,575503,208906902,1,sprot_increase.csv
+trembl,<search outputs>/trembl/hmmsearch_mgnifams,<search outputs>/trembl/hmmsearch_pfams,149234636,58049358499,150,trembl_increase.csv
 ```
 
 `total_sequences` / `total_residues` are the **whole** database, sequences with no hit included —
@@ -69,8 +69,8 @@ searches; the pipeline refuses both together), and pass `--target_z`:
 
 ```csv
 subset,mgnifams_domtbl_dir,pfam_domtbl_dir,total_sequences,total_residues,n_chunks,search_z
-swissprot,/nfs/.../swissprot/hmmsearch_mgnifams,/nfs/.../swissprot/hmmsearch_pfams,575503,208906902,1,575503
-trembl,/nfs/.../trembl/hmmsearch_mgnifams,/nfs/.../trembl/hmmsearch_pfams,149234636,58049358499,150,149234636
+swissprot,<search outputs>/swissprot/hmmsearch_mgnifams,<search outputs>/swissprot/hmmsearch_pfams,575503,208906902,1,575503
+trembl,<search outputs>/trembl/hmmsearch_mgnifams,<search outputs>/trembl/hmmsearch_pfams,149234636,58049358499,150,149234636
 ```
 
 ```bash
