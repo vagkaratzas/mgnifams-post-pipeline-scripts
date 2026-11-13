@@ -1,0 +1,16 @@
+#                                                                            --- full sequence --- -------------- this domain -------------   hmm coord   ali coord   env coord
+# target name        accession   tlen query name           accession   qlen   E-value  score  bias   #  of  c-Evalue  i-Evalue  score  bias  from    to  from    to  from    to  acc description of target
+#------------------- ---------- ----- -------------------- ---------- ----- --------- ------ ----- --- --- --------- --------- ------ ----- ----- ----- ----- ----- ----- ----- ---- ---------------------
+MGYP000917027859     -            575 ELLD                 PF25309.2    173   4.5e-19   57.4   0.1   1   1   2.7e-11   1.3e-10   29.8   0.0    46   170     4   142     2   145 0.75 -
+MGYP000917027859     -            575 Glyco_hydro_25       PF01183.27   180   1.2e-18   56.5   0.1   1   1     4e-19     2e-18   55.8   0.1     1   179   222   406   222   407 0.83 -
+MGYP000999643617     -            658 Lipase_GDSL_2        PF13472.13   178   3.4e-12   35.7   1.0   1   1   6.8e-13   3.4e-12   35.7   1.0     1   131    69   216    69   256 0.72 -
+#
+# Program:         hmmsearch
+# Version:         3.3.2 (Nov 2020)
+# Pipeline mode:   SEARCH
+# Query file:      Pfam-A.38.2.hmm.gz
+# Target file:     translated.faa
+# Option settings: hmmsearch --domtblout pfam38.2.domtbl --noali --cut_ga --cpu 8 Pfam-A.38.2.hmm.gz translated.faa 
+# Current dir:     fig4
+# Date:            Wed Nov 11 14:01:38 2026
+# [ok]

@@ -1,0 +1,21 @@
+250	trembl	7	9.938177998e-166	tr|A8PR02|A8PR02_MALGO	Shugoshin C-terminal domain-containing protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_0558 PE=3 SV=1
+1613	trembl	5	3.915039818e-128	tr|A8Q3C0|A8Q3C0_MALGO	RRM domain-containing protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_2357 PE=4 SV=1
+1925	trembl	1	5.320438726e-156	tr|A8Q428|A8Q428_MALGO	Sin3 C-terminal domain-containing protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_2491 PE=4 SV=1
+2553	trembl	1	1.806941454e-46	tr|C8NH99|C8NH99_9LACT	Plasmin and fibronectin-binding protein A OS=Granulicatella adiacens ATCC 49175 OX=638301 GN=pfbA PE=4 SV=1
+4142	trembl	51	4.718124908e-102	tr|A8Q0X7|A8Q0X7_MALGO	CRAL-TRIO domain-containing protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_2096 PE=4 SV=1
+4840	trembl	1	1.606170182e-57	tr|A0A4Y1WRP0|A0A4Y1WRP0_9BACT	DUF5723 domain-containing protein OS=Alistipes communis OX=2585118 GN=A5CBH24_06780 PE=4 SV=1
+9300	trembl	1	1.204627636e-92	tr|K8F6Y4|K8F6Y4_9CHLO	Splicing factor Cactin OS=Bathycoccus prasinos OX=41875 GN=Bathy18g00320 PE=3 SV=1
+12231	trembl	64	7.729693999e-137	tr|K8F739|K8F739_9CHLO	MIF4G domain-containing protein OS=Bathycoccus prasinos OX=41875 GN=Bathy18g00500 PE=4 SV=1
+12410	trembl	1	2.308869636e-78	tr|K8ER66|K8ER66_9CHLO	mitogen-activated protein kinase kinase kinase OS=Bathycoccus prasinos OX=41875 GN=Bathy17g00830 PE=3 SV=1
+13101	trembl	15	6.725837635e-282	tr|A8Q3C2|A8Q3C2_MALGO	Uncharacterized protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_2358 PE=4 SV=1
+14322	trembl	2	1.505784545e-36	tr|F4EYX6|F4EYX6_SELS3	Uncharacterized protein OS=Selenomonas sputigena (strain ATCC 35185 / DSM 20758 / CCUG 44933 / VPI D19B-28) OX=546271 GN=Selsp_0561 PE=4 SV=1
+16382	trembl	3	2.810797818e-248	tr|A0AAJ5Z171|A0AAJ5Z171_9BASI	Uncharacterized protein OS=Malassezia arunalokei OX=1514897 GN=MARU1_003102 PE=4 SV=1
+20748	trembl	1	8.633164726e-65	tr|A8Q3C0|A8Q3C0_MALGO	RRM domain-containing protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_2357 PE=4 SV=1
+20910	trembl	1	3.714268545e-104	tr|K8F1S4|K8F1S4_9CHLO	HTH myb-type domain-containing protein OS=Bathycoccus prasinos OX=41875 GN=Bathy07g03390 PE=4 SV=1
+24217	trembl	16	7.328151453e-131	tr|A0A3G2SA84|A0A3G2SA84_MALR7	SPT2 chromatin protein OS=Malassezia restricta (strain ATCC 96810 / NBRC 103918 / CBS 7877) OX=425264 GN=DNF11_3820 PE=3 SV=1
+24643	trembl	4	2.509640909e-226	tr|A0A6S4GS32|A0A6S4GS32_9BACT	Uncharacterized protein OS=Candidatus Nanosynbacter lyticus OX=2093824 GN=TM7x_01325 PE=4 SV=1
+26779	trembl	15	0	tr|A8PS21|A8PS21_MALGO	Uncharacterized protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_0177 PE=4 SV=1
+28004	trembl	1	1.606170182e-69	tr|K8EAL6|K8EAL6_9CHLO	PX domain-containing protein OS=Bathycoccus prasinos OX=41875 GN=Bathy02g00890 PE=4 SV=1
+28224	trembl	7	0	tr|A8Q4U5|A8Q4U5_MALGO	Rab-GAP TBC domain-containing protein OS=Malassezia globosa (strain ATCC MYA-4612 / CBS 7966) OX=425265 GN=MGL_2641 PE=4 SV=1
+28897	trembl	3	2.509640909e-238	tr|K8EFB7|K8EFB7_9CHLO	SUN domain-containing protein OS=Bathycoccus prasinos OX=41875 GN=Bathy05g05140 PE=4 SV=1
+31302	trembl	1	5.721981272e-132	tr|K8F386|K8F386_9CHLO	histone acetyltransferase OS=Bathycoccus prasinos OX=41875 GN=Bathy09g00770 PE=3 SV=1

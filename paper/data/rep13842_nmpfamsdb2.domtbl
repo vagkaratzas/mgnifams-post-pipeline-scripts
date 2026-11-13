@@ -1,0 +1,15 @@
+#                                                                            --- full sequence --- -------------- this domain -------------   hmm coord   ali coord   env coord
+# target name        accession   tlen query name           accession   qlen   E-value  score  bias   #  of  c-Evalue  i-Evalue  score  bias  from    to  from    to  from    to  acc description of target
+#------------------- ---------- ----- -------------------- ---------- ----- --------- ------ ----- --- --- --------- --------- ------ ----- ----- ----- ----- ----- ----- ----- ---- ---------------------
+13842                -            100 F354778              -            119   6.4e-29  105.2   1.1   1   1   1.1e-34   6.9e-29  105.1   1.1     1   101     1    97     1   100 0.94 MGYP003118503354/1-100
+13842                -            100 F434082              -            103   2.5e-60  206.1   1.5   1   1   4.6e-66   2.8e-60  206.0   1.5     1   100     1   100     1   100 0.99 MGYP003118503354/1-100
+#
+# Program:         hmmsearch
+# Version:         3.4 (Aug 2023)
+# Pipeline mode:   SEARCH
+# Query file:      nmpfamsdb2.hmm
+# Target file:     nmpfamsdb2_queries.faa
+# Option settings: /usr/local/bin/hmmsearch -o /dev/null --domtblout nmpfamsdb2_queries.domtbl --noali -E 0.001 --domE 0.001 -Z 608258 --cpu 8 nmpfamsdb2.hmm nmpfamsdb2_queries.faa 
+# Current dir:     probes_2026-11-11
+# Date:            Wed Nov 11 19:01:07 2026
+# [ok]

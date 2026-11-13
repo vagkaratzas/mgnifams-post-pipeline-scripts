@@ -1,0 +1,67 @@
+%%metro style: light
+%%metro line: create | Release 1.0: generation (MGnify Proteins 2024_04) | #24B064
+%%metro line: update | Release 1.1: update (MGnify Proteins 2026_07) | #F18A1C
+%%metro legend: bl
+%%metro grid: ana | 2,1
+
+graph LR
+    subgraph gen [Family generation]
+        mg90a([MGnify90 2024_04])
+        slice1([Pfam removed])
+        ur1([MGnify-UR])
+        seeds([Seed clusters])
+        build([Families built])
+        redund([Non-redundant])
+        mg90a -->|create| slice1
+        slice1 -->|create| ur1
+        ur1 -->|create| seeds
+        seeds -->|create| build
+        build -->|create| redund
+    end
+
+    subgraph upd [Family update]
+        mg90b([MGnify90 2026_07])
+        slice2([Pfam removed])
+        ur2([MGnify-UR])
+        recruit([1.0 HMM search])
+        updated([34,419 updated])
+        mg90b -->|update| slice2
+        slice2 -->|update| ur2
+        ur2 -->|update| recruit
+        recruit -->|update| updated
+    end
+
+    subgraph fam [Families]
+        fams([35,459])
+    end
+
+    subgraph ann [Annotation]
+        %%metro exit: right | create,update
+        prof([Profile search])
+        esm([Structure])
+        seqann([Pfam / FunFam])
+        fold([Structure search])
+        tmdis([TM / disorder])
+        prof -->|create| esm
+        esm -->|create,update| seqann
+        seqann -->|create,update| fold
+        fold -->|create,update| tmdis
+    end
+
+    subgraph ana [Analyses]
+        %%metro entry: right | create,update
+        %%metro direction: RL
+        cov([UniProtKB coverage])
+        biome([Biomes])
+        arch([Architectures])
+        clans([Clans])
+        cov -->|update| biome
+        biome -->|update| arch
+        arch -->|update| clans
+    end
+
+    redund -->|create| fams
+    updated -->|update| fams
+    fams -->|create| prof
+    fams -->|update| esm
+    tmdis -->|create,update| cov
