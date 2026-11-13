@@ -35,6 +35,7 @@ Scripts that no paper number depends on (superseded analyses, exploration, websi
 | Near-identical family pairs (Limitations) | `near_identical.py` | `clan_edges.tsv.gz` of two runs |
 | Change between releases 1.0 and 1.1 (Discussion) | `diff_10_11.sh`, `diff_followup.sh` | release 1.0 and 1.1 full MSAs |
 | Multiple hits per protein (Methods, case studies) | `classify_multi_hits.py` / `.sh`, `rows_stats.py` | release 1.1 full MSAs |
+| Protein cover of MGYF0000000025 (Clans and domain architectures) | `protein_cover.py` | `classify_multi_hits.py --rows` output, MGnify Proteins API |
 | Domain architectures, Figure 4; Pfam domains per family | `architectures.py` / `.sh`, `figure_architectures.py`, `pfam_per_family.py` / `.sh` | full MSAs, MGnify Proteins 2026_07 Pfam parquet |
 | Member regions of MGYF0000000025 against Pfam and FunFam | `member_search.sh` | full MSA, Pfam-A 38.2, CATH-FunFams 4.3.0 |
 | Gene neighbourhoods (MGYF0000000025, MGYF0000000243, MGYF0000032058), Figure 6 | `neighbourhood.py` / `.sh`, `independence.py`, `figure6.py` | full MSAs, MGnify Proteins 2026_07 parquets, MGnify API |
