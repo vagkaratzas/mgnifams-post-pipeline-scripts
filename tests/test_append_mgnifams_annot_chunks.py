@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 
-PIPELINE_DIR = Path(__file__).resolve().parents[1]
+PIPELINE_DIR = Path(__file__).resolve().parents[1] / "pipelines" / "annotation_percentages"
 BIN_DIR = PIPELINE_DIR / "bin"
 
 
