@@ -17,7 +17,7 @@ CATS = [("membrane_a", "membrane-α"), ("membrane_b", "membrane-β"),
         ("tm_any", "transmembrane (any)"), ("disorder", "disordered"),
         ("tm_or_disorder", "transmembrane or disordered"), ("not_tm_disorder", "neither"),
         ("novel_structure_any", "no Pfam or FunFam match"),
-        ("novel", "no annotation from any source"), ("any", "all families")]
+        ("novel", "no match to any resource"), ("any", "all families")]
 
 
 def num(s):
