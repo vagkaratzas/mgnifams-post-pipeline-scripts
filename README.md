@@ -42,6 +42,7 @@ Scripts that no paper number depends on (superseded analyses, exploration, websi
 | Structure of the 1.1_clan_3863 representative, Figure 5 | `figure5.py`, `render_structure.py` (PyMOL) | `data/esmfold_*`, Pfam 38.2 domtbl |
 | Novel families against NMPFamsDB (Supplementary Table S3) | `novel_reps.py` | `data/novel_*`, NMPFamsDB v1 and NMPFamsDB2 HMMs |
 | Representatives no longer in MGnify Proteins, partial representatives (Limitations) | `rep_resolve.py` (`--all`) | release 1.1 `families.tsv.gz`, MGnify Proteins API |
+| Model confidence of partial and full-length representatives (Limitations) | `plddt_partial.py` | `rep_resolve.py --all` output, `catalogue_probe.py --dump` output |
 | Figure 1 | `paper/figures/figure-1.mmd` | rendered with nf-metro |
 | Figure 2 | `figure2.gen.py` | writes `paper/figures/figure-2.excalidraw` |
 
