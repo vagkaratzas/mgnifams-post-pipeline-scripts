@@ -80,6 +80,13 @@ class Architectures(unittest.TestCase):
         self.assertEqual(a.rank_at([r["proteins"] for r in rows], 0.5), 1)
 
 
+class NoPfam(unittest.TestCase):
+    def test_rows_of_proteins_without_pfam(self):
+        copies = {4: [(1, 50, True, True, True)], 2: [(70, 90, False, False, True), (5, 30, False, True, False)]}
+        self.assertEqual(a.no_pfam_rows("7", copies, {4: [("PF00528", 1e-9, 50.0, 60, 200)]}),
+                         [("7", 2, 5, 30), ("7", 2, 70, 90)])
+
+
 class Parquet(unittest.TestCase):
     def test_pfam_hits_and_main(self):
         import pyarrow as pa

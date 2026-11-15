@@ -111,7 +111,7 @@ def draw(out, regions, pfam, stats, tmp, length):
     ax = fig.add_axes([0, 0, 1, 1], xlim=(0, WIDTH_MM), ylim=(0, H))
     ax.set_axis_off()
 
-    # a, b: the two renders side by side (same crop, so the views stay identical), legends under each
+    # A, B: the two renders side by side (same crop, so the views stay identical), legends under each
     legend_top = BOTTOM_MM + 16
     imgs = [mimg.imread(Path(tmp, f"{n}.png")) for n in ("panel_a", "panel_b")]
     img = crop(imgs[0])
@@ -124,7 +124,7 @@ def draw(out, regions, pfam, stats, tmp, length):
         x0 = 4 + i * (WIDTH_MM / 2) + (box_w - pw) / 2
         part = full[r0:r0 + img.shape[0], c0:c0 + img.shape[1]]
         ax.imshow(part, extent=(x0, x0 + pw, legend_top + 2, legend_top + 2 + ph), zorder=1)
-        ax.text(2 + i * (WIDTH_MM / 2), H - 2, "ab"[i], fontweight="bold", fontsize=TEXT_SIZE_PT + 2, va="top")
+        ax.text(2 + i * (WIDTH_MM / 2), H - 2, "AB"[i], fontweight="bold", fontsize=TEXT_SIZE_PT + 2, va="top")
     partner = ", ".join(f"{f}–{t}" for f, t in stats["partner"])
     spans = copy_unions(regions)
     leg_a = [(MGNIFAM_COLOR, "Family region (" + ", ".join(f"{f}–{t}" for f, t in spans) + ")"),
@@ -136,8 +136,8 @@ def draw(out, regions, pfam, stats, tmp, length):
             ax.add_patch(Rectangle((cx, cy - 1.0), 3.0, 2.0, facecolor=color, edgecolor="none"))
             ax.text(cx + 4.2, cy, text, va="center")
 
-    # c: regions to scale
-    ax.text(2, BOTTOM_MM - 1, "c", fontweight="bold", fontsize=TEXT_SIZE_PT + 2, va="top")
+    # C: regions to scale
+    ax.text(2, BOTTOM_MM - 1, "C", fontweight="bold", fontsize=TEXT_SIZE_PT + 2, va="top")
     left, right = 34, WIDTH_MM - 6
     ax.text(left, BOTTOM_MM - 1.6, f"MGYP009160527382 ({length} aa)", va="top", fontweight="bold")
     x = lambda r: left + (r - 1) * (right - left) / length  # noqa: E731
