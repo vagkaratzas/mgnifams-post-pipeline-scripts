@@ -24,4 +24,5 @@ md5sum "$HERE/architectures.py" "$HERE/classify_multi_hits.py" "$CLANS"
 files=(); for id in $CASES; do files+=("$MSA/$id.sto.gz"); done
 ls -la "${files[@]}" "$DB/mgy_proteins_pfam.parquet"
 $RUN python3 "$HERE/architectures.py" "${files[@]}" --pfam "$DB/mgy_proteins_pfam.parquet" --clans "$CLANS" \
-  --out "$HERE/architectures_${SLURM_JOB_ID:-local}.tsv.gz" --cpus "${SLURM_CPUS_PER_TASK:-1}"
+  --out "$HERE/architectures_${SLURM_JOB_ID:-local}.tsv.gz" --cpus "${SLURM_CPUS_PER_TASK:-1}" \
+  ${NOPFAM:+--no-pfam-rows "$HERE/no_pfam_rows_${SLURM_JOB_ID:-local}.tsv.gz"}  # NOPFAM=1: copies of no-Pfam proteins

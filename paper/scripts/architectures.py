@@ -9,7 +9,7 @@ One architecture per distinct member protein: its MGnifam copies and Pfam domain
 
 Usage: architectures.py MSA... --pfam mgy_proteins_pfam.parquet --clans Pfam-A.clans.tsv.gz --out arch.tsv.gz
 stdout: per family, proteins, architectures, rank at which 95% of proteins are covered, proteins with no Pfam,
-then the top rows. --out: every architecture row. Needs pyarrow (no numpy). Read-only.
+then the top rows. --out: every architecture row; --no-pfam-rows: the copies of proteins with no Pfam. Needs pyarrow (no numpy). Read-only.
 """
 
 import argparse
@@ -83,6 +83,13 @@ def aggregate(family, copies, pfams, clan_of):
             for i, flag in enumerate(flags):
                 counts[i] += flag
     return sorted(rows.values(), key=lambda r: (-r["proteins"], r["architecture"]))
+
+
+def no_pfam_rows(family, copies, pfams):
+    """(family, mgyp, seq_from, seq_to) per MGnifam copy of the proteins with no Pfam hit (protein_cover.py input).
+    shortcut: a split copy is one span, so its insertion counts as covered; rows from the MSA if that matters."""
+    return [(family, protein, c[0], c[1]) for protein in sorted(copies) if protein not in pfams
+            for c in sorted(copies[protein])]
 
 
 def rank_at(counts, cover):
@@ -160,6 +167,7 @@ def main(argv=None):
     parser.add_argument("--clans", required=True, help="Pfam-A.clans.tsv.gz of the parquet's Pfam release")
     parser.add_argument("--out", required=True, help="every architecture row (.tsv.gz)")
     parser.add_argument("--cpus", type=int, default=1, help="row-group workers")
+    parser.add_argument("--no-pfam-rows", help="copies of the member proteins with no Pfam hit (.tsv.gz)")
     args = parser.parse_args(argv)
     t0 = time.time()
     families = [mgnifam_copies(path) for path in args.msa]
@@ -186,6 +194,11 @@ def main(argv=None):
             print(f"{family}\t{total}\t{len(rows)}\t{rank_at([r['proteins'] for r in rows], COVER)}\t{no_pfam}\t"
                   + " | ".join(f"{' '.join(r['architecture'])} {r['proteins']} ({100 * r['proteins'] / total:.1f}%)"
                                for r in rows[:5]), flush=True)
+    if args.no_pfam_rows:
+        with gzip.open(args.no_pfam_rows, "wt") as out:
+            out.write("family\tmgyp\tseq_from\tseq_to\n")
+            for family, copies in families:
+                out.writelines("\t".join(map(str, r)) + "\n" for r in no_pfam_rows(family, copies, pfams))
     print(f"# done {time.time() - t0:.0f}s")
 
 
